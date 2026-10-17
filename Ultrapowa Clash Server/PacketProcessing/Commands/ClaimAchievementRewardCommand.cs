@@ -24,5 +24,13 @@ namespace UCS.PacketProcessing
 
         public uint AchievementId { get; set; } 
         public uint Unknown1 { get; set; }
+
+        //Tutorial step13 = achievements
+        public override void Execute(Level level)
+        {
+            ClientAvatar ca = level.GetPlayerAvatar();
+            ca.TutorialStepsCount = Math.Max(ca.TutorialStepsCount, 13u);
+            Console.WriteLine("[UCS] Tutorial passos=" + ca.TutorialStepsCount + " (achievement " + AchievementId + ")");
+        }
     }
 }

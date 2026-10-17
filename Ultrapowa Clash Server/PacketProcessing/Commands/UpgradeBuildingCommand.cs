@@ -41,6 +41,13 @@ namespace UCS.PacketProcessing
                         ResourceData rd = bd.GetBuildResource(b.GetUpgradeLevel() + 1);
                         ca.SetResourceCount(rd, ca.GetResourceCount(rd) - bd.GetBuildCost(b.GetUpgradeLevel() + 1));
                         b.StartUpgrading();
+
+                        //Tutorial step12 = upgrade town hall
+                        if (bd.GetGlobalID() == 1000001)
+                        {
+                            ca.TutorialStepsCount = Math.Max(ca.TutorialStepsCount, 12u);
+                            Console.WriteLine("[UCS] Tutorial passos=" + ca.TutorialStepsCount + " (TH upgrade)");
+                        }
                     }
                 }
             }

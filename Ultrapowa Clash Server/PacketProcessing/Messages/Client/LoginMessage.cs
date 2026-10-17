@@ -76,6 +76,7 @@ namespace UCS.PacketProcessing
 
         public override void Process(Level level)
         {
+            Console.WriteLine("LOGIN: major=" + m_vClientMajorVersion + " content=" + m_vClientContentVersion + " build=" + m_vClientBuild + " gameVersion=" + m_vGameVersion + " accountId=" + m_vAccountId);
             if (Convert.ToBoolean(ConfigurationManager.AppSettings["maintenanceMode"]))
             {
                 var p = new LoginFailedMessage(this.Client);

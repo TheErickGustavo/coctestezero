@@ -56,18 +56,27 @@ namespace UCS.PacketProcessing
                     {
                         for (int i = 0; i < NumberOfCommands; i++)
                         {
-                            object obj = CommandFactory.Read(br);
-                            if (obj != null)
+                            try
                             {
-                                string player = "";
-                                if (level != null)
-                                    player += " (" + level.GetPlayerAvatar().GetId() + ", " + level.GetPlayerAvatar().GetAvatarName() + ")";
-                                Debugger.WriteLine("\t" + obj.GetType().Name + player);
-                                ((Command)obj).Execute(level);
-                                //Debugger.WriteLine("finished processing of command " + obj.GetType().Name + player);
+                                object obj = CommandFactory.Read(br);
+                                if (obj != null)
+                                {
+                                    string player = "";
+                                    if (level != null)
+                                        player += " (" + level.GetPlayerAvatar().GetId() + ", " + level.GetPlayerAvatar().GetAvatarName() + ")";
+                                    Debugger.WriteLine("\t" + obj.GetType().Name + player);
+                                    ((Command)obj).Execute(level);
+                                    //Debugger.WriteLine("finished processing of command " + obj.GetType().Name + player);
+                                }
+                                else
+                                    break;
                             }
-                            else
-                                break;
+                            catch (Exception cmdEx)
+                            {
+                                Console.ForegroundColor = ConsoleColor.Red;
+                                Debugger.WriteLine("[UCS] Comando falhou (seguindo): " + cmdEx.Message);
+                                Console.ResetColor();
+                            }
                         }
                     }
                 }

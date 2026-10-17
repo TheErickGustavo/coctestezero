@@ -253,6 +253,8 @@ namespace UCS.Logic
         public override void Load(JObject jsonObject)
         {
             JObject unitProdObject = (JObject)jsonObject["unit_prod"];
+            if (unitProdObject == null)
+                return;
             m_vIsSpellForge = (unitProdObject["unit_type"].ToObject<int>() == 1);
             var timeToken = unitProdObject["t"];
             if (timeToken != null)

@@ -32,19 +32,63 @@ namespace UCS.PacketProcessing
             ClientAvatar ca = level.GetPlayerAvatar();
 
             BuildingData bd = (BuildingData)ObjectManager.DataTables.GetDataById(BuildingId);
-            Building b = new Building(bd, level);
-
-            if (ca.HasEnoughResources(bd.GetBuildResource(0), bd.GetBuildCost(0)))
+            if (bd == null)
             {
-                if (bd.IsWorkerBuilding() || level.HasFreeWorkers())
-                {
-                    //Ajouter un check sur le réservoir d'élixir noir
-                    ResourceData rd = bd.GetBuildResource(0);
-                    ca.CommodityCountChangeHelper(0, rd, -bd.GetBuildCost(0));
+                Console.WriteLine("[UCS] BuyBuilding id=" + BuildingId + " SEM BuildingData na tabela");
+                return;
+            }
 
-                    b.StartConstructing(X, Y);
-                    level.GameObjectManager.AddGameObject(b);
+            foreach (var go in level.GameObjectManager.GetGameObjects(0))
+            {
+                Building ex = go as Building;
+                if (ex == null)
+                    continue;
+                if (ex.X == X && ex.Y == Y)
+                {
+                    Console.WriteLine("[UCS] BuyBuilding id=" + BuildingId + " RECUSADO: tile (" + X + "," + Y + ") ja ocupado por id=" + ex.GetBuildingData().GetGlobalID());
+                    return;
                 }
+            }
+
+            int cost = bd.GetBuildCost(0);
+            ResourceData rd = bd.GetBuildResource(0);
+            bool hasRes = rd != null && ca.HasEnoughResources(rd, cost);
+            bool freeWorker = level.HasFreeWorkers();
+            bool force = true;
+
+            Console.WriteLine("[UCS] BuyBuilding id=" + BuildingId + " pos=(" + X + "," + Y + ") custo=" + cost +
+                " " + (rd != null ? rd.GetName() : "?") + " temRecurso=" + hasRes + " workerLivre=" + freeWorker + " force=" + force);
+
+            if (force || (hasRes && (bd.IsWorkerBuilding() || freeWorker)))
+            {
+                if (rd != null && hasRes)
+                    ca.CommodityCountChangeHelper(0, rd, -cost);
+
+                Building b = new Building(bd, level);
+                b.StartConstructing(X, Y);
+                level.GameObjectManager.AddGameObject(b);
+
+                if (force && b.IsConstructing())
+                    b.SpeedUpConstruction();
+
+                Console.WriteLine("[UCS] BuyBuilding OK id=" + BuildingId + " lvl=" + b.GetUpgradeLevel());
+
+                //Tutorial: mapeia predio->passo (missions.csv: step1 cannon, step4 second builder, step5 elixir pump,
+                //step6 elixir storage, step7 gold storage, step8 barrack). Nunca regride.
+                switch (BuildingId)
+                {
+                    case 1000008: ca.TutorialStepsCount = Math.Max(ca.TutorialStepsCount, 1u); break;
+                    case 1000015: ca.TutorialStepsCount = Math.Max(ca.TutorialStepsCount, 4u); break;
+                    case 1000002: ca.TutorialStepsCount = Math.Max(ca.TutorialStepsCount, 5u); break;
+                    case 1000003: ca.TutorialStepsCount = Math.Max(ca.TutorialStepsCount, 6u); break;
+                    case 1000005: ca.TutorialStepsCount = Math.Max(ca.TutorialStepsCount, 7u); break;
+                    case 1000006: ca.TutorialStepsCount = Math.Max(ca.TutorialStepsCount, 8u); break;
+                }
+                Console.WriteLine("[UCS] Tutorial passos=" + ca.TutorialStepsCount);
+            }
+            else
+            {
+                Console.WriteLine("[UCS] BuyBuilding RECUSADO id=" + BuildingId);
             }
         }
     }

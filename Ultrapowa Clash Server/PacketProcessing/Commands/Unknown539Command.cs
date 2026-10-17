@@ -27,6 +27,7 @@ namespace UCS.PacketProcessing
 
         public override void Execute(Level level)
         {
+            Console.WriteLine("[UCS] 539 missao=" + Unknown1 + " valor=" + Unknown2);
         }
     }
 }

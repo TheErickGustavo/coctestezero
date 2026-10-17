@@ -29,6 +29,9 @@ namespace UCS.PacketProcessing
 
         public override void Process(Level level)
         {
+            Console.WriteLine("[UCS] AttackNpc LevelId=0x" + LevelId.ToString("X8") + " index=" + (LevelId - 0x01036640));
+            level.LastNpcAttackLevelId = LevelId;
+
             NpcDataMessage san = new NpcDataMessage(this.Client, level, this);
             PacketManager.ProcessOutgoingPacket(san);
         }

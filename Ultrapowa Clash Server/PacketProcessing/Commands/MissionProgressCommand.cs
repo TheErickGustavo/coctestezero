@@ -24,5 +24,12 @@ namespace UCS.PacketProcessing
 
         public uint MissionId { get; set; } 
         public uint Unknown1 { get; set; } //00 00 2D 7F some client tick
+
+        public override void Execute(Level level)
+        {
+            //7.65: NAO persistir progresso aqui. A captura real mostra tutSteps=0 mesmo no meio do tutorial;
+            //persistir faz o cliente pular de estado no relogin e crashar (StackOverflow GLThread).
+            Console.WriteLine("[UCS] MissionProgress " + (MissionId - 0x01406F40) + " (ignorado, nao persiste)");
+        }
     }
 }

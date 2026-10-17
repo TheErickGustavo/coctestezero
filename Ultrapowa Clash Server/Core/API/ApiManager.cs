@@ -17,7 +17,7 @@ namespace UCS.Core
         public ApiManager()
         {
             m_vListener = new HttpListener();
-            m_vListener.Prefixes.Add("http://localhost:1172/");
+            m_vListener.Prefixes.Add("http://localhost:1173/");
             //m_vListener.AuthenticationSchemes = AuthenticationSchemes.Anonymous;
             m_vListener.Start();
             Action action = RunServer;

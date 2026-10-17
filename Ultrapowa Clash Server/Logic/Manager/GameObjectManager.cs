@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using System.ComponentModel;
+using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UCS.PacketProcessing;
@@ -141,6 +142,31 @@ namespace UCS.Logic
             }
             jsonData.Add("decos", jsonDecosArray);
 
+            //Obstacles
+            JArray jsonObstaclesArray = new JArray();
+            foreach (var go in m_vGameObjects[3])
+            {
+                Obstacle o = (Obstacle)go;
+                JObject jsonObstacle = new JObject();
+                jsonObstacle.Add("data", o.GetObstacleData().GetGlobalID());
+                o.Save(jsonObstacle);
+                jsonObstacle.Add("loot_multiply_ver", 1);
+                jsonObstaclesArray.Add(jsonObstacle);
+            }
+            jsonData.Add("obstacles", jsonObstaclesArray);
+
+            //RespawnVars / liga (espelho do home real 7.65.5)
+            JObject jsonRespawn = new JObject();
+            jsonRespawn.Add("secondsFromLastRespawn", 0);
+            jsonRespawn.Add("respawnSeed", 0);
+            jsonRespawn.Add("time_to_gembox_drop", 2147000000);
+            jsonRespawn.Add("time_in_gembox_period", 2147000000);
+            jsonRespawn.Add("time_to_special_drop", 2147000000);
+            jsonRespawn.Add("time_to_special_period", 2147000000);
+            jsonData.Add("respawnVars", jsonRespawn);
+            jsonData.Add("last_league_rank", 0);
+            jsonData.Add("last_league_shuffle", 150);
+
             return jsonData;
         }
 
@@ -171,6 +197,34 @@ namespace UCS.Logic
                 Deco d = new Deco(dd, m_vLevel);
                 AddGameObject(d);
                 d.Load(jsonDeco);
+            }
+
+            JArray jsonObstacles = (JArray)jsonObject["obstacles"];
+            if (jsonObstacles == null)
+            {
+                try
+                {
+                    if (File.Exists("gamefiles/default/home.json"))
+                    {
+                        JObject defJson = JObject.Parse(File.ReadAllText("gamefiles/default/home.json"));
+                        jsonObstacles = (JArray)defJson["obstacles"];
+                        Console.WriteLine("[UCS] Obstaculos: fallback home.json padrao (" + (jsonObstacles != null ? jsonObstacles.Count : 0) + " itens)");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("[UCS] Obstaculos fallback falhou: " + ex.Message);
+                }
+            }
+            if (jsonObstacles != null)
+            {
+                foreach (JObject jsonObstacle in jsonObstacles)
+                {
+                    ObstacleData od = (ObstacleData)ObjectManager.DataTables.GetDataById(jsonObstacle["data"].ToObject<int>());
+                    Obstacle o = new Obstacle(od, m_vLevel);
+                    AddGameObject(o);
+                    o.Load(jsonObstacle);
+                }
             }
         }
     }

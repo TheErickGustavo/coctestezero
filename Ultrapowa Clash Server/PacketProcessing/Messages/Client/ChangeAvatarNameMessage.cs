@@ -33,9 +33,12 @@ namespace UCS.PacketProcessing
         public override void Process(Level level)
         {
             level.GetPlayerAvatar().SetName(this.PlayerName);
-            var p = new AvatarNameChangeOkMessage(this.Client);
+            level.GetPlayerAvatar().TutorialStepsCount = Math.Max(level.GetPlayerAvatar().TutorialStepsCount, 11u);
+            Console.WriteLine("[UCS] Tutorial passos=" + level.GetPlayerAvatar().TutorialStepsCount + " (rename 10212)");
+            var p = new AvatarNameChangeOkMessage(this.Client, true);
             p.SetAvatarName(level.GetPlayerAvatar().GetAvatarName());
             PacketManager.ProcessOutgoingPacket(p);
+            PacketManager.ProcessOutgoingPacket(new OwnHomeDataMessage(this.Client, level));
         }
     }
 }

@@ -183,7 +183,8 @@ namespace UCS.Logic
 
         public override void Load(JObject jsonObject)
         {
-            IsSpellForge = (jsonObject["storage_type"].ToObject<int>() == 1);
+            var storageTypeToken = jsonObject["storage_type"];
+            IsSpellForge = (storageTypeToken != null) && (storageTypeToken.ToObject<int>() == 1);
             JArray unitArray = (JArray)jsonObject["units"];
             if (unitArray != null)
             {

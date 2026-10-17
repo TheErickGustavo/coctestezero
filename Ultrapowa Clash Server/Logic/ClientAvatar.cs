@@ -18,6 +18,13 @@ namespace UCS.Logic
     class ClientAvatar : Avatar
     {
         private long m_vId;
+        private bool m_vWithAchievements = true;
+
+        public bool WithAchievements
+        {
+            get { return m_vWithAchievements; }
+            set { m_vWithAchievements = value; }
+        }
         private long m_vCurrentHomeId;
         private long m_vAllianceId;
         private int m_vAvatarLevel;
@@ -51,12 +58,20 @@ namespace UCS.Logic
             this.EndShieldTime = (int)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds + Convert.ToInt32(ConfigurationManager.AppSettings["startingShieldTime"]));
             m_vCurrentGems = Convert.ToInt32(ConfigurationManager.AppSettings["startingGems"]);
             m_vScore = Convert.ToInt32(ConfigurationManager.AppSettings["startingTrophies"]);
-            this.TutorialStepsCount = 0x0A;
-            m_vAvatarName = "NoNameYet";
+            //7.65: conta nova = tutorial do zero (captura real: tutSteps=0). 0x0A/0x0D fazia o cliente pular para o passo da batalha e crashar (StackOverflow GLThread)
+            this.TutorialStepsCount = 0x00;
+            //7.65: nome vazio ou com 9+ chars crasha o cliente (buffer de nome do cliente)
+            m_vAvatarName = "Chief";
+            m_vIsAvatarNameSet = 0x01;
             SetResourceCount(ObjectManager.DataTables.GetResourceByName("Gold"), Convert.ToInt32(ConfigurationManager.AppSettings["startingGold"]));
             SetResourceCount(ObjectManager.DataTables.GetResourceByName("Elixir"), Convert.ToInt32(ConfigurationManager.AppSettings["startingElixir"]));
             SetResourceCount(ObjectManager.DataTables.GetResourceByName("DarkElixir"), Convert.ToInt32(ConfigurationManager.AppSettings["startingDarkElixir"]));
             SetResourceCount(ObjectManager.DataTables.GetResourceByName("Diamonds"), Convert.ToInt32(ConfigurationManager.AppSettings["startingGems"]));
+            //7.65 tutorial: 5 Magos ("os magos da Torre de Marfim") para a batalha do acampamento goblin.
+            //Captura real do tutorial: units=[(4000006, 5)]. Sem eles o cliente crasha (StackOverflow) ao atacar.
+            CharacterData wizard = ObjectManager.DataTables.GetCharacterByName("Wizard");
+            if (wizard != null)
+                SetUnitCount(wizard, 5);
         }
 
         public byte[] Encode()
@@ -111,30 +126,30 @@ namespace UCS.Logic
             data.AddInt32(0x003C);
             data.AddInt32(m_vScore);
 
-            data.AddRange(new byte[]{
-                0x00, 0x00, 0x00, 0x00, 
-                0x00, 0x00, 0x00, 0x00, 
-                0x00, 0x00, 0x00, 0x00, 
-                0x00, 0x00, 0x00, 0x00, 
-                0x00, 0x00, 0x00, 0x00, 
-                0x00, 0x00, 0x00, 0x00, 
-                0x00, 0x00, 0x00, 0x00, 
-                0x01, 
-                0x00, 0x00, 0x00, 0xDC, 0x6C, 0xF5, 0xEB, 0x48
-            });
-
-            data.Add(m_vIsAvatarNameSet);
-            data.AddInt32(0); //Cumulative Purchased Diamonds
+            //7.65: sem bloco const de 37 bytes (desalinha o parser 7.65 -> crash)
             data.AddInt32(0);
+            //7.65: captura real usa 1 BYTE aqui (nao u32!); u32 desalinha +3 bytes e zera recursos no cliente
+            data.Add(1);
 
-            //7.65
-            data.AddInt32(0);
+            //7.65: captura real envia caps na ordem gold/elixir/dark (3 itens, sem gems)
+            var orderedCaps = new List<DataSlot>();
+            foreach (String resName in new[] { "Gold", "Elixir", "DarkElixir" })
+            {
+                ResourceData rd = ObjectManager.DataTables.GetResourceByName(resName);
+                int idx = GetDataIndex(GetResourceCaps(), rd);
+                orderedCaps.Add(new DataSlot(rd, idx == -1 ? 0 : GetResourceCaps()[idx].Value));
+            }
+            data.AddDataSlots(orderedCaps);
 
-            //7.1
-            data.AddInt32(1);
-
-            data.AddDataSlots(GetResourceCaps());
-            data.AddDataSlots(GetResources());
+            //7.65: captura real envia recursos com gems primeiro
+            var orderedRes = new List<DataSlot>();
+            foreach (String resName in new[] { "Diamonds", "Gold", "Elixir", "DarkElixir" })
+            {
+                ResourceData rd = ObjectManager.DataTables.GetResourceByName(resName);
+                int idx = GetDataIndex(GetResources(), rd);
+                orderedRes.Add(new DataSlot(rd, idx == -1 ? 0 : GetResources()[idx].Value));
+            }
+            data.AddDataSlots(orderedRes);
             data.AddDataSlots(GetUnits());
             data.AddDataSlots(GetSpells());
             data.AddDataSlots(m_vUnitUpgradeLevel);
@@ -162,17 +177,34 @@ namespace UCS.Logic
                 data.AddRange(BitConverter.GetBytes(a.Data.GetGlobalID()).Reverse());
             }
 
-            //Achievement Progress
-            data.AddRange(BitConverter.GetBytes(Achievements.Count).Reverse());
-            foreach (DataSlot a in Achievements)
+            //Achievement Progress - captura real 7.65: 66 slots na ordem exata
+            //0x15EF3C0..0x15EF3CB, 0x15EF3CF..0x15EF401, 0x15EF3CC..0x15EF3CE (npc por ultimo)
+            //controlavel por arquivo (avatar-home-ach.txt / avatar-npc-ach.txt) p/ bissecar
+            if (m_vWithAchievements)
             {
-                data.AddRange(BitConverter.GetBytes(a.Data.GetGlobalID()).Reverse());
-                data.AddRange(BitConverter.GetBytes(0).Reverse());//A CHANGER
-            }
+                data.AddRange(BitConverter.GetBytes(66).Reverse());
+                for (int i = 0; i < 66; i++)
+                {
+                    int id;
+                    if (i < 12)
+                        id = 0x15EF3C0 + i;
+                    else if (i < 63)
+                        id = 0x15EF3CF + (i - 12);
+                    else
+                        id = 0x15EF3CC + (i - 63);
+                    data.AddRange(BitConverter.GetBytes(id).Reverse());
+                    data.AddRange(BitConverter.GetBytes(0).Reverse());
+                }
 
-            data.AddDataSlots(NpcStars);
-            data.AddDataSlots(NpcLootedGold);
-            data.AddDataSlots(NpcLootedElixir);
+                //7.65: 7 u32 zero no final (captura real)
+                for (int i = 0; i < 7; i++)
+                    data.AddRange(BitConverter.GetBytes(0).Reverse());
+            }
+            else
+            {
+                //comportamento original UCS: lista de progresso vazia
+                data.AddRange(BitConverter.GetBytes(0).Reverse());
+            }
 
             //7.65
             data.AddInt32(0);
@@ -505,7 +537,7 @@ namespace UCS.Logic
         {
             m_vAvatarName = name;
             m_vIsAvatarNameSet = 0x01;
-            this.TutorialStepsCount = 0x0D;
+            //7.65: NAO mexer no tutorial aqui (0x0D crashava o cliente no proximo login)
         }
 
         public void UseDiamonds(int diamondCount)

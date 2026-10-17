@@ -26,6 +26,8 @@ namespace UCS.PacketProcessing
 
         public override void Encode()
         {
+            Player.GetPlayerAvatar().WithAchievements = true;
+
             List<Byte> data = new List<Byte>();
 
             ClientHome ch = new ClientHome(Player.GetPlayerAvatar().GetId());

@@ -18,6 +18,7 @@ namespace UCS.Logic
 
         public GameObjectManager GameObjectManager;//a1 + 44
         public WorkerManager WorkerManager;
+        public int LastNpcAttackLevelId { get; set; }
         private Client m_vClient;
         private ClientAvatar m_vClientAvatar;
         private DateTime m_vTime;//a1 + 40

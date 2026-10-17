@@ -13,7 +13,7 @@ namespace UCS.Network
     class Gateway
     {
         const int 
-            kPort = 9339,
+            kPort = 9340,
             kHostConnectionBacklog = 30;
         private static Socket m_vServerSocket;
         IPAddress ip;

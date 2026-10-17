@@ -31,6 +31,14 @@ namespace UCS.PacketProcessing
 
         public override void Execute(Level level)
         {
+            //Tutorial step9 = train warriors (barbaro 4000000)
+            if (UnitType == 4000000)
+            {
+                ClientAvatar caT = level.GetPlayerAvatar();
+                caT.TutorialStepsCount = Math.Max(caT.TutorialStepsCount, 9u);
+                Console.WriteLine("[UCS] Tutorial passos=" + caT.TutorialStepsCount + " (train warriors)");
+            }
+
             GameObject go = level.GameObjectManager.GetGameObjectByID(BuildingId);
             if(Count > 0)
             {
