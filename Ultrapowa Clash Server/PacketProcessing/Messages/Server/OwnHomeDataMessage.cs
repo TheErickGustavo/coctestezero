@@ -26,6 +26,14 @@ namespace UCS.PacketProcessing
 
         public override void Encode()
         {
+            string goldenPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "golden-24101.bin");
+            if (File.Exists(goldenPath))
+            {
+                SetData(File.ReadAllBytes(goldenPath));
+                Console.WriteLine("[UCS] OwnHomeData: GOLDEN INJECTION (" + new FileInfo(goldenPath).Length + " bytes)");
+                return;
+            }
+
             Player.GetPlayerAvatar().WithAchievements = true;
 
             List<Byte> data = new List<Byte>();
