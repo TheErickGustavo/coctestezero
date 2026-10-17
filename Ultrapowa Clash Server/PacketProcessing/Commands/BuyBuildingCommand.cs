@@ -54,7 +54,7 @@ namespace UCS.PacketProcessing
             ResourceData rd = bd.GetBuildResource(0);
             bool hasRes = rd != null && ca.HasEnoughResources(rd, cost);
             bool freeWorker = level.HasFreeWorkers();
-            bool force = true;
+            bool force = false;
 
             Console.WriteLine("[UCS] BuyBuilding id=" + BuildingId + " pos=(" + X + "," + Y + ") custo=" + cost +
                 " " + (rd != null ? rd.GetName() : "?") + " temRecurso=" + hasRes + " workerLivre=" + freeWorker + " force=" + force);
