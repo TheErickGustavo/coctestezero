@@ -69,27 +69,30 @@ namespace UCS.PacketProcessing
             int memberOrder = 0;
             foreach (var allianceMember in allianceMembers)
             {
-                //entrada real de membro: i64 id, nome, 10x i32 (role, level, league, score, 0,0,0, order, 0,0), u8 1, u8 1, i64 id
+                //entrada real de membro: i64 id, nome, 10x i32 (role, level, league, score, doadas, recebidas, 0, ordem 1-based, 0, 0), u8 1, u8 1, i64 id
                 pack.AddInt64(allianceMember.GetAvatarId());
-                Level memberLevel = ResourcesManager.GetPlayer(allianceMember.GetAvatarId());
+                Level memberLevel = ResourcesManager.GetPlayer(allianceMember.GetAvatarId(), true);
                 string memberName = "?";
                 int memberExpLevel = 1, memberLeague = 0, memberScore = 0;
+                int memberDonated = 0, memberReceived = 0;
                 if (memberLevel != null && memberLevel.GetPlayerAvatar() != null)
                 {
                     memberName = memberLevel.GetPlayerAvatar().GetAvatarName();
                     memberExpLevel = memberLevel.GetPlayerAvatar().GetAvatarLevel();
                     memberLeague = memberLevel.GetPlayerAvatar().GetLeagueId();
                     memberScore = memberLevel.GetPlayerAvatar().GetScore();
+                    memberDonated = memberLevel.GetPlayerAvatar().GetDonatedTroops();
+                    memberReceived = memberLevel.GetPlayerAvatar().GetReceivedTroops();
                 }
                 pack.AddString(memberName);
                 pack.AddInt32(allianceMember.GetRole());
                 pack.AddInt32(memberExpLevel);
                 pack.AddInt32(memberLeague);
                 pack.AddInt32(memberScore);
+                pack.AddInt32(memberDonated);   //A (real: tropas doadas)
+                pack.AddInt32(memberReceived);  //B (real: tropas recebidas)
                 pack.AddInt32(0);
-                pack.AddInt32(0);
-                pack.AddInt32(0);
-                pack.AddInt32(memberOrder);
+                pack.AddInt32(memberOrder + 1); //D (real: ordem 1-based)
                 pack.AddInt32(0);
                 pack.AddInt32(0);
                 pack.Add(1);

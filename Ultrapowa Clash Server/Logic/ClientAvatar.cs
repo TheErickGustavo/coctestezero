@@ -34,6 +34,8 @@ namespace UCS.Logic
         private int m_vScore;
         private byte m_vIsAvatarNameSet;
         private int m_vLeagueId;
+        private int m_vDonatedTroops;   //X4b: tropas doadas (aparece no perfil/lista de membros)
+        private int m_vReceivedTroops;  //X4b: tropas recebidas
 
         public ClientAvatar() : base()
         {
@@ -119,7 +121,7 @@ namespace UCS.Logic
             data.AddInt32(0);
             data.AddInt32(50);
             data.AddInt32(0);
-            data.AddInt32(0);
+            data.AddInt32(m_vScore);     //F7 = trofeus (real: score; conferido com capturas: 859/4456 = linha de membro)
             data.AddInt32(2);
             data.AddInt32(2);
             data.AddInt32(3);
@@ -259,6 +261,16 @@ namespace UCS.Logic
             return m_vScore;
         }
 
+        public int GetDonatedTroops()
+        {
+            return m_vDonatedTroops;
+        }
+
+        public int GetReceivedTroops()
+        {
+            return m_vReceivedTroops;
+        }
+
         public bool HasEnoughDiamonds(int diamondCount)
         {
             return (m_vCurrentGems >= diamondCount);
@@ -294,6 +306,8 @@ namespace UCS.Logic
             jsonData.Add("experience", m_vExperience);
             jsonData.Add("current_gems", m_vCurrentGems);
             jsonData.Add("score", m_vScore);
+            jsonData.Add("donated_troops", m_vDonatedTroops);
+            jsonData.Add("received_troops", m_vReceivedTroops);
             jsonData.Add("is_avatar_name_set", m_vIsAvatarNameSet);
 
             /*JArray jsonResourceCapsArray = new JArray();
@@ -396,6 +410,10 @@ namespace UCS.Logic
             m_vExperience = jsonObject["experience"].ToObject<int>();
             m_vCurrentGems = jsonObject["current_gems"].ToObject<int>();
             m_vScore = jsonObject["score"].ToObject<int>();
+            if (jsonObject["donated_troops"] != null)
+                m_vDonatedTroops = jsonObject["donated_troops"].ToObject<int>();
+            if (jsonObject["received_troops"] != null)
+                m_vReceivedTroops = jsonObject["received_troops"].ToObject<int>();
             m_vIsAvatarNameSet = jsonObject["is_avatar_name_set"].ToObject<byte>();
 
             /*JArray jsonMaxResources = (JArray)jsonObject["max_resources"];
@@ -533,6 +551,16 @@ namespace UCS.Logic
         public void SetLeagueId(int id)
         {
             m_vLeagueId = id;
+        }
+
+        public void SetDonatedTroops(int count)
+        {
+            m_vDonatedTroops = count;
+        }
+
+        public void SetReceivedTroops(int count)
+        {
+            m_vReceivedTroops = count;
         }
 
         public void SetName(string name)

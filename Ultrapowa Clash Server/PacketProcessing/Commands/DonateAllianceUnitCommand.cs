@@ -42,7 +42,7 @@ namespace UCS.PacketProcessing
                     return;
 
                 var requesterLevel = ResourcesManager.GetPlayer(requesterId, true);
-                if (requesterLevel == null)
+                if (requesterLevel == null || requesterLevel.GetPlayerAvatar() == null)
                 {
                     Debugger.WriteLine("[UCS] Doacao ignorada: solicitante nao encontrado (" + requesterId + ")");
                     return;
@@ -55,89 +55,29 @@ namespace UCS.PacketProcessing
                     return;
                 }
 
-                // Remove a unidade do acampamento do doador (se existir).
-                bool removed = false;
-                for (int ci = 0; ci < 12 && !removed; ci++)
-                {
-                    List<GameObject> objs = null;
-                    try { objs = level.GameObjectManager.GetGameObjects(ci); }
-                    catch { objs = null; }
-                    if (objs == null) continue;
-                    foreach (var go in objs)
-                    {
-                        var c = go as Building;
-                        if (c == null) continue;
-                        if (c.GetBuildingData() == null || c.GetBuildingData().GetGlobalID() != 1000000)
-                            continue;
-                        var usc = c.GetUnitStorageComponent();
-                        if (usc == null) continue;
-                        if (usc.GetUnitTypeIndex(unitData) < 0)
-                            continue;
-                        usc.RemoveUnits(unitData, 1);
-                        removed = true;
-                        break;
-                    }
-                }
-                if (!removed)
-                {
-                    Debugger.WriteLine("[UCS] Doacao ignorada: doador sem a unidade " + this.UnitType);
-                    return;
-                }
-
-                // Adiciona a unidade ao castelo do solicitante.
-                ConstructionItem castle = null;
-                for (int ci = 0; ci < 12 && castle == null; ci++)
-                {
-                    List<GameObject> objs = null;
-                    try { objs = requesterLevel.GameObjectManager.GetGameObjects(ci); }
-                    catch { objs = null; }
-                    if (objs == null) continue;
-                    foreach (var go in objs)
-                    {
-                        var c = go as Building;
-                        if (c == null) continue;
-                        if (c.GetBuildingData() == null || c.GetBuildingData().GetGlobalID() != 1000014)
-                            continue;
-                        castle = c;
-                        break;
-                    }
-                }
-                if (castle == null)
-                {
-                    Debugger.WriteLine("[UCS] Doacao ignorada: castelo nao encontrado (" + requesterId + ")");
-                    return;
-                }
-                var castleStorage = castle.GetUnitStorageComponent(true);
-                if (castleStorage == null || !castleStorage.AddDonatedUnit(unitData))
-                {
-                    Debugger.WriteLine("[UCS] Doacao ignorada: castelo cheio (" + requesterId + ")");
-                    return;
-                }
-
-                // Aviso no mural do cla.
                 long allianceId = donor.GetAllianceId();
                 if (allianceId <= 0)
                     allianceId = requesterLevel.GetPlayerAvatar().GetAllianceId();
                 var alliance = (allianceId > 0) ? ObjectManager.GetAlliance(allianceId) : null;
+                TroopRequest request = (alliance != null) ? alliance.GetTroopRequest(requesterId) : null;
+
+                //X4b: fluxo unico (respeita lista de tropas pedidas + capacidade do castelo; atualiza contadores)
+                string error;
+                int delivered = AllianceTroopService.Donate(level, requesterLevel, unitData, 1, request, out error);
+                if (delivered <= 0)
+                {
+                    Debugger.WriteLine("[UCS] Doacao ignorada: " + (error ?? "motivo desconhecido"));
+                    return;
+                }
+
                 if (alliance != null)
                 {
-                    string msg = donor.GetAvatarName() + " doou tropas para " + requesterLevel.GetPlayerAvatar().GetAvatarName();
-                    ChatStreamEntry cm = new ChatStreamEntry();
-                    cm.SetId((int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds);
-                    cm.SetAvatar(donor);
-                    cm.SetMessage(msg);
-                    alliance.AddChatMessage(cm);
-                    foreach (var onlinePlayer in ResourcesManager.GetOnlinePlayers())
-                    {
-                        if (onlinePlayer.GetPlayerAvatar().GetAllianceId() == allianceId)
-                        {
-                            var p = new AllianceStreamEntryMessage(onlinePlayer.GetClient());
-                            p.SetStreamEntry(cm);
-                            PacketManager.ProcessOutgoingPacket(p);
-                        }
-                    }
+                    string progress = AllianceTroopService.GetCastleProgress(requesterLevel);
+                    string msg = donor.GetAvatarName() + " doou " + delivered + "x " + TroopNameParser.GetDisplayName(unitData)
+                        + " para " + requesterLevel.GetPlayerAvatar().GetAvatarName() + " (" + progress + ")";
+                    ChatBroadcast.ToAlliance(alliance, ChatBroadcast.MakeEntry(donor, msg));
                 }
-                Debugger.WriteLine("[UCS] Doacao: " + donor.GetAvatarName() + " -> " + requesterId + " unidade " + this.UnitType);
+                Debugger.WriteLine("[UCS] Doacao: " + donor.GetAvatarName() + " -> " + requesterId + " " + delivered + "x " + TroopNameParser.GetDisplayName(unitData));
             }
             catch (Exception ex)
             {
@@ -146,5 +86,5 @@ namespace UCS.PacketProcessing
                 Console.ResetColor();
             }
         }
-}
+    }
 }

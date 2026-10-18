@@ -55,9 +55,13 @@ namespace UCS.Logic
 
         // Doacao de cla: adiciona a unidade ao castelo sem mexer no contador do avatar
         // do receptor (a tropa doada nao conta como exercito proprio do receptor).
+        // Capacidade conferida LOCALMENTE (so este armazem): CanAddUnit() usava o total
+        // da vila (acampamentos etc.), o que barrava a doacao errado.
         public bool AddDonatedUnit(CombatItemData cd)
         {
-            if (!CanAddUnit(cd))
+            if (cd == null)
+                return false;
+            if (GetUsedCapacity() + cd.GetHousingSpace() > GetMaxCapacity())
                 return false;
             int unitIndex = GetUnitTypeIndex(cd, -1);
             if (unitIndex == -1)

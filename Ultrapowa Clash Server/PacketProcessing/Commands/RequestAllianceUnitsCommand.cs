@@ -44,27 +44,47 @@ namespace UCS.PacketProcessing
                 if (alliance == null)
                     return;
 
-                string msg = (FlagHasRequestMessage == 0x01 && !string.IsNullOrEmpty(Message))
-                    ? (avatar.GetAvatarName() + " pediu tropas: " + Message)
-                    : (avatar.GetAvatarName() + " pediu tropas");
+                string rawMessage = (FlagHasRequestMessage == 0x01 && !string.IsNullOrEmpty(Message)) ? Message : "";
 
-                ChatStreamEntry cm = new ChatStreamEntry();
-                cm.SetId((int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds);
-                cm.SetAvatar(avatar);
-                cm.SetMessage(msg);
+                //X4b: extrai as tropas citadas na mensagem (ex: "dragao e barbaro" -> [dragao, barbaro])
+                List<int> wanted = TroopNameParser.ExtractUnitIds(rawMessage);
 
-                alliance.AddChatMessage(cm);
-
-                foreach (var onlinePlayer in ResourcesManager.GetOnlinePlayers())
+                //capacidade do castelo (housing): predio do jogador; fallback pro avatar
+                int capacity = 0, used = 0;
+                Building castle;
+                UnitStorageComponent storage = AllianceTroopService.GetCastleStorage(level, out castle);
+                if (storage != null)
                 {
-                    if (onlinePlayer.GetPlayerAvatar().GetAllianceId() == allianceId)
-                    {
-                        var p = new AllianceStreamEntryMessage(onlinePlayer.GetClient());
-                        p.SetStreamEntry(cm);
-                        PacketManager.ProcessOutgoingPacket(p);
-                    }
+                    capacity = storage.GetMaxCapacity();
+                    used = storage.GetUsedCapacity();
                 }
-                Debugger.WriteLine("[UCS] Pedido de tropas: " + avatar.GetAvatarName() + " (cla " + allianceId + ")");
+                if (capacity <= 0)
+                {
+                    capacity = avatar.GetAllianceCastleTotalCapacity();
+                    used = avatar.GetAllianceCastleUsedCapacity();
+                }
+                if (capacity <= 0)
+                {
+                    capacity = 10;
+                    used = 0;
+                }
+
+                //registra/substitui o pedido pendente do jogador
+                TroopRequest request = new TroopRequest();
+                request.SetRequesterId(avatar.GetId());
+                request.SetRequesterName(avatar.GetAvatarName());
+                request.SetMessage(rawMessage);
+                request.SetWantedUnits(wanted);
+                request.SetCapacity(capacity);
+                request.SetUsedSpace(used);
+                request.SetTimestamp((int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds);
+                alliance.AddOrUpdateTroopRequest(request);
+
+                string msg = avatar.GetAvatarName() + " pediu tropas (" + used + "/" + capacity + ")" + (rawMessage.Length > 0 ? ": " + rawMessage : "");
+                ChatBroadcast.ToAlliance(alliance, ChatBroadcast.MakeEntry(avatar, msg));
+
+                string wantedText = (wanted.Count > 0) ? TroopNameParser.DescribeWanted(wanted) : "qualquer tropa";
+                Debugger.WriteLine("[UCS] Pedido de tropas: " + avatar.GetAvatarName() + " (cla " + allianceId + ") quer: " + wantedText + " (" + used + "/" + capacity + ")");
             }
             catch (Exception ex)
             {
@@ -73,5 +93,5 @@ namespace UCS.PacketProcessing
                 Console.ResetColor();
             }
         }
-}
+    }
 }

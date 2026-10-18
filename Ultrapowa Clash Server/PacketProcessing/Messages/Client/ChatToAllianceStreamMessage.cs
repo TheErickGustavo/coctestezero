@@ -34,6 +34,10 @@ namespace UCS.PacketProcessing
             var allianceId = avatar.GetAllianceId();
             if (allianceId > 0)
             {
+                //X4b: comandos de chat ("/doar", "/ajuda") — respondem em privado e NAO entram no mural
+                if (ChatCommands.TryHandle(level, this.Client, m_vChatMessage))
+                    return;
+
                 ChatStreamEntry cm = new ChatStreamEntry();
                 cm.SetId((int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds);
                 cm.SetAvatar(avatar);

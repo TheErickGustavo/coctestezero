@@ -33,10 +33,12 @@ namespace UCS.Logic
         private const int m_vMaxChatMessagesNumber = 30;
         private Dictionary<long, AllianceMemberEntry> m_vAllianceMembers;
         private const int m_vMaxAllianceMembers = 50;
+        private List<TroopRequest> m_vTroopRequests; //X4b: pedidos de tropas pendentes (mural/doacao)
 
         public Alliance() {
             m_vChatMessages = new List<StreamEntry>();
             m_vAllianceMembers = new Dictionary<long, AllianceMemberEntry>();
+            m_vTroopRequests = new List<TroopRequest>();
         }
 
         public Alliance(long id)
@@ -57,6 +59,7 @@ namespace UCS.Logic
             m_vDrawWars = 0;
             m_vChatMessages = new List<StreamEntry>();
             m_vAllianceMembers = new Dictionary<long, AllianceMemberEntry>();
+            m_vTroopRequests = new List<TroopRequest>();
         }
 
         public byte[] EncodeFullEntry()
@@ -178,6 +181,49 @@ namespace UCS.Logic
             return m_vChatMessages;
         }
 
+        //===== X4b: pedidos de tropas pendentes =====
+        public List<TroopRequest> GetTroopRequests()
+        {
+            return m_vTroopRequests;
+        }
+
+        public TroopRequest GetTroopRequest(long requesterId)
+        {
+            for (int i = 0; i < m_vTroopRequests.Count; i++)
+                if (m_vTroopRequests[i].GetRequesterId() == requesterId)
+                    return m_vTroopRequests[i];
+            return null;
+        }
+
+        //Pedido mais recente que ainda cabe tropa, ignorando o proprio doador.
+        public TroopRequest GetLatestTroopRequest(long excludeAvatarId)
+        {
+            TroopRequest latest = null;
+            foreach (TroopRequest r in m_vTroopRequests)
+            {
+                if (r.GetRequesterId() == excludeAvatarId)
+                    continue;
+                if (r.IsFull())
+                    continue;
+                if (latest == null || r.GetTimestamp() > latest.GetTimestamp())
+                    latest = r;
+            }
+            return latest;
+        }
+
+        public void AddOrUpdateTroopRequest(TroopRequest request)
+        {
+            RemoveTroopRequest(request.GetRequesterId());
+            m_vTroopRequests.Add(request);
+        }
+
+        public void RemoveTroopRequest(long requesterId)
+        {
+            for (int i = m_vTroopRequests.Count - 1; i >= 0; i--)
+                if (m_vTroopRequests[i].GetRequesterId() == requesterId)
+                    m_vTroopRequests.RemoveAt(i);
+        }
+
         public int GetRequiredScore()
         {
             return m_vRequiredScore;
@@ -251,6 +297,15 @@ namespace UCS.Logic
             }
             jsonData.Add("chat", jsonChatArray);
 
+            JArray jsonRequestsArray = new JArray();
+            foreach (var request in m_vTroopRequests)
+            {
+                JObject jsonRequest = new JObject();
+                request.Save(jsonRequest);
+                jsonRequestsArray.Add(jsonRequest);
+            }
+            jsonData.Add("troop_requests", jsonRequestsArray);
+
             return JsonConvert.SerializeObject(jsonData);
         }
 
@@ -305,6 +360,17 @@ namespace UCS.Logic
                     if (c["time"] != null)
                         entry.SetMessageTime(new DateTime(1970, 1, 1).AddSeconds(c["time"].ToObject<long>()));
                     AddChatMessage(entry);
+                }
+            }
+
+            if (jsonObject["troop_requests"] != null)
+            {
+                JArray jsonRequests = (JArray)jsonObject["troop_requests"];
+                foreach (JObject r in jsonRequests)
+                {
+                    TroopRequest request = new TroopRequest();
+                    request.Load(r);
+                    m_vTroopRequests.Add(request);
                 }
             }
         }
