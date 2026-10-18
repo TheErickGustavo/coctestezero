@@ -166,8 +166,9 @@ namespace UCS.PacketProcessing
             if (alliance == null)
                 level.GetPlayerAvatar().SetAllianceId(0);
             PacketManager.ProcessOutgoingPacket(new OwnHomeDataMessage(this.Client, level));
-            if (alliance != null)
-                PacketManager.ProcessOutgoingPacket(new AllianceStreamMessage(this.Client, alliance));
+            //X1: o servidor real NAO manda 24311 no login (capturas conn27, conta com cla) - removido p/ ficar igual ao real
+            //if (alliance != null)
+            //    PacketManager.ProcessOutgoingPacket(new AllianceStreamMessage(this.Client, alliance));
         }
     }
 }

@@ -81,80 +81,58 @@ namespace UCS.Logic
             data.AddInt32(0);
             data.AddInt64(m_vId);
             data.AddInt64(m_vCurrentHomeId);
-            if(m_vAllianceId != 0)
+            Alliance alliance = m_vAllianceId != 0 ? ObjectManager.GetAlliance(m_vAllianceId) : null;
+            if(alliance != null)
             {
-                //===== CLÃ: caminho antigo mantido (não validado no layout real 7.65; Zero não tem clãs) =====
-                data.Add(1);
-                data.AddInt64(m_vAllianceId);
-                Alliance alliance = ObjectManager.GetAlliance(m_vAllianceId);
-                data.AddString(alliance.GetAllianceName());
-                data.AddInt32(alliance.GetAllianceBadgeData());
-                data.AddInt32(alliance.GetAllianceMember(m_vId).GetRole());
-                data.AddInt32(alliance.GetAllianceLevel());
-                data.Add(0);
-                data.AddInt32(0);
-
-                //7.156
-                data.AddInt32(0);
-                data.AddInt32(0);
-                data.AddInt32(0);
-                data.AddInt32(0);
-                data.AddInt32(0);
-                data.AddInt32(0);
-                data.AddInt32(0);
-                data.AddInt32(0);
-                data.AddInt32(0);
-                data.AddInt32(0);
-                data.AddInt32(m_vLeagueId);//league
-
-                data.AddInt32(GetAllianceCastleLevel());
-                data.AddInt32(GetAllianceCastleTotalCapacity());
-                data.AddInt32(GetAllianceCastleUsedCapacity());
-                data.AddInt32(GetTownHallLevel());
-                data.AddString(m_vAvatarName);
-                data.AddInt32(-1);
-                data.AddInt32(m_vAvatarLevel);
-                data.AddInt32(m_vExperience);
-                data.AddInt32(m_vCurrentGems);
-                data.AddInt32(m_vCurrentGems); //FreeDiamonds
-                data.AddInt32(0x04B0);
-                data.AddInt32(0x003C);
-                data.AddInt32(m_vScore);
-                data.AddInt32(0);
-                data.Add(1);
+                //===== 7.65 LAYOUT REAL com clã (validado byte-a-byte: conn27-24101-7/-8 e #124/#137) =====
+                data.Add(1);                                     //flag com clã
+                data.AddInt64(m_vAllianceId);                    //alliance id
+                data.AddString(alliance.GetAllianceName());      //nome do clã
+                data.AddInt32(alliance.GetAllianceBadgeData());  //badge
+                int myRole = 1;
+                foreach (AllianceMemberEntry ame in alliance.GetAllianceMembers())
+                    if (ame.GetAvatarId() == m_vId) { myRole = ame.GetRole(); break; }
+                data.AddInt32(myRole);                           //role do jogador (real: 1=membro; nosso criador=2)
+                data.AddInt32(0);                                //desconhecido (real: 0)
+                data.Add(1); data.AddInt64(69);                  //desconhecido (real: u8 1 + i64 69)
+                data.Add(1); data.AddInt64(m_vAllianceId);       //clã de novo (real: u8 1 + i64 allId)
+                data.AddInt32(0);                                //desconhecido (real: 0)
+                data.AddInt32(0);                                //desconhecido (real: 0)
             }
             else
             {
                 //===== 7.65 LAYOUT REAL sem clã (validado byte-a-byte: conn27-1..6 + tutorial) =====
                 data.Add(0);                 //flag sem clã
                 data.AddInt64(0);            //alliance id (i64! o antigo era u8+i32: desalinhava o parser -> crash)
-                data.AddInt32(10);           //league: 10 em TODAS as capturas reais (incl. tutorial)
-                data.AddInt32(0);            //A
-                data.AddInt32(2);            //B (0 no tutorial; 2 nos pós-tutorial)
-                data.AddString(m_vAvatarName);
-                //F0..F11 (F1=level, F2=xp, F3=gems; F5/F8..F11 constantes reais)
-                data.AddInt32(0);
-                data.AddInt32(m_vAvatarLevel);
-                data.AddInt32(m_vExperience);
-                data.AddInt32(m_vCurrentGems);
-                data.AddInt32(0);
-                data.AddInt32(50);
-                data.AddInt32(0);
-                data.AddInt32(0);
-                data.AddInt32(2);
-                data.AddInt32(2);
-                data.AddInt32(3);
-                data.AddInt32(4);
-                //CONST37 real: 12x00, 01, 8x00, 02, 15x00
-                for (int i = 0; i < 37; i++)
-                {
-                    byte b = 0;
-                    if (i == 12) b = 0x01;
-                    else if (i == 21) b = 0x02;
-                    data.Add(b);
-                }
-                data.Add(1);                 //1 BYTE (âncora pós-bloco; real)
             }
+
+            //===== cauda comum 7.65 (offset @29 sem clã / @77 com clã; idêntica) =====
+            data.AddInt32(10);           //league: 10 em TODAS as capturas reais (incl. tutorial)
+            data.AddInt32(0);            //A
+            data.AddInt32(2);            //B (0 no tutorial; 2 nos pós-tutorial)
+            data.AddString(m_vAvatarName);
+            //F0..F11 (F1=level, F2=xp, F3=gems; F5/F8..F11 constantes reais)
+            data.AddInt32(0);
+            data.AddInt32(m_vAvatarLevel);
+            data.AddInt32(m_vExperience);
+            data.AddInt32(m_vCurrentGems);
+            data.AddInt32(0);
+            data.AddInt32(50);
+            data.AddInt32(0);
+            data.AddInt32(0);
+            data.AddInt32(2);
+            data.AddInt32(2);
+            data.AddInt32(3);
+            data.AddInt32(4);
+            //CONST37 real: 12x00, 01, 8x00, 02, 15x00
+            for (int i = 0; i < 37; i++)
+            {
+                byte b = 0;
+                if (i == 12) b = 0x01;
+                else if (i == 21) b = 0x02;
+                data.Add(b);
+            }
+            data.Add(1);                 //1 BYTE (âncora pós-bloco; real)
 
             //7.65: captura real envia caps na ordem gold/elixir/dark (3 itens, sem gems)
             var orderedCaps = new List<DataSlot>();
