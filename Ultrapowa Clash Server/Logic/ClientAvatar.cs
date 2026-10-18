@@ -83,6 +83,7 @@ namespace UCS.Logic
             data.AddInt64(m_vCurrentHomeId);
             if(m_vAllianceId != 0)
             {
+                //===== CLÃ: caminho antigo mantido (não validado no layout real 7.65; Zero não tem clãs) =====
                 data.Add(1);
                 data.AddInt64(m_vAllianceId);
                 Alliance alliance = ObjectManager.GetAlliance(m_vAllianceId);
@@ -92,44 +93,68 @@ namespace UCS.Logic
                 data.AddInt32(alliance.GetAllianceLevel());
                 data.Add(0);
                 data.AddInt32(0);
+
+                //7.156
+                data.AddInt32(0);
+                data.AddInt32(0);
+                data.AddInt32(0);
+                data.AddInt32(0);
+                data.AddInt32(0);
+                data.AddInt32(0);
+                data.AddInt32(0);
+                data.AddInt32(0);
+                data.AddInt32(0);
+                data.AddInt32(0);
+                data.AddInt32(m_vLeagueId);//league
+
+                data.AddInt32(GetAllianceCastleLevel());
+                data.AddInt32(GetAllianceCastleTotalCapacity());
+                data.AddInt32(GetAllianceCastleUsedCapacity());
+                data.AddInt32(GetTownHallLevel());
+                data.AddString(m_vAvatarName);
+                data.AddInt32(-1);
+                data.AddInt32(m_vAvatarLevel);
+                data.AddInt32(m_vExperience);
+                data.AddInt32(m_vCurrentGems);
+                data.AddInt32(m_vCurrentGems); //FreeDiamonds
+                data.AddInt32(0x04B0);
+                data.AddInt32(0x003C);
+                data.AddInt32(m_vScore);
+                data.AddInt32(0);
+                data.Add(1);
             }
             else
             {
-                data.Add(0);
+                //===== 7.65 LAYOUT REAL sem clã (validado byte-a-byte: conn27-1..6 + tutorial) =====
+                data.Add(0);                 //flag sem clã
+                data.AddInt64(0);            //alliance id (i64! o antigo era u8+i32: desalinhava o parser -> crash)
+                data.AddInt32(10);           //league: 10 em TODAS as capturas reais (incl. tutorial)
+                data.AddInt32(0);            //A
+                data.AddInt32(2);            //B (0 no tutorial; 2 nos pós-tutorial)
+                data.AddString(m_vAvatarName);
+                //F0..F11 (F1=level, F2=xp, F3=gems; F5/F8..F11 constantes reais)
                 data.AddInt32(0);
+                data.AddInt32(m_vAvatarLevel);
+                data.AddInt32(m_vExperience);
+                data.AddInt32(m_vCurrentGems);
+                data.AddInt32(0);
+                data.AddInt32(50);
+                data.AddInt32(0);
+                data.AddInt32(0);
+                data.AddInt32(2);
+                data.AddInt32(2);
+                data.AddInt32(3);
+                data.AddInt32(4);
+                //CONST37 real: 12x00, 01, 8x00, 02, 15x00
+                for (int i = 0; i < 37; i++)
+                {
+                    byte b = 0;
+                    if (i == 12) b = 0x01;
+                    else if (i == 21) b = 0x02;
+                    data.Add(b);
+                }
+                data.Add(1);                 //1 BYTE (âncora pós-bloco; real)
             }
-
-            //7.156
-            data.AddInt32(0);
-            data.AddInt32(0);
-            data.AddInt32(0);
-            data.AddInt32(0);
-            data.AddInt32(0);
-            data.AddInt32(0);
-            data.AddInt32(0);
-            data.AddInt32(0);
-            data.AddInt32(0);
-            data.AddInt32(0);
-            data.AddInt32(m_vLeagueId);//league
-
-            data.AddInt32(GetAllianceCastleLevel());
-            data.AddInt32(GetAllianceCastleTotalCapacity());
-            data.AddInt32(GetAllianceCastleUsedCapacity());
-            data.AddInt32(GetTownHallLevel());
-            data.AddString(m_vAvatarName);
-            data.AddInt32(-1);
-            data.AddInt32(m_vAvatarLevel);
-            data.AddInt32(m_vExperience);
-            data.AddInt32(m_vCurrentGems);
-            data.AddInt32(m_vCurrentGems); //FreeDiamonds
-            data.AddInt32(0x04B0);
-            data.AddInt32(0x003C);
-            data.AddInt32(m_vScore);
-
-            //7.65: sem bloco const de 37 bytes (desalinha o parser 7.65 -> crash)
-            data.AddInt32(0);
-            //7.65: captura real usa 1 BYTE aqui (nao u32!); u32 desalinha +3 bytes e zera recursos no cliente
-            data.Add(1);
 
             //7.65: captura real envia caps na ordem gold/elixir/dark (3 itens, sem gems)
             var orderedCaps = new List<DataSlot>();
@@ -146,8 +171,13 @@ namespace UCS.Logic
             foreach (String resName in new[] { "Diamonds", "Gold", "Elixir", "DarkElixir" })
             {
                 ResourceData rd = ObjectManager.DataTables.GetResourceByName(resName);
-                int idx = GetDataIndex(GetResources(), rd);
-                orderedRes.Add(new DataSlot(rd, idx == -1 ? 0 : GetResources()[idx].Value));
+                if (resName == "Diamonds")
+                    orderedRes.Add(new DataSlot(rd, m_vCurrentGems)); //F3 e 1º slot de recursos = gemas reais (o mapa GetResources() do UCS diverge do escalar)
+                else
+                {
+                    int idx = GetDataIndex(GetResources(), rd);
+                    orderedRes.Add(new DataSlot(rd, idx == -1 ? 0 : GetResources()[idx].Value));
+                }
             }
             data.AddDataSlots(orderedRes);
             data.AddDataSlots(GetUnits());
@@ -180,34 +210,26 @@ namespace UCS.Logic
             //Achievement Progress - captura real 7.65: 66 slots na ordem exata
             //0x15EF3C0..0x15EF3CB, 0x15EF3CF..0x15EF401, 0x15EF3CC..0x15EF3CE (npc por ultimo)
             //controlavel por arquivo (avatar-home-ach.txt / avatar-npc-ach.txt) p/ bissecar
-            if (m_vWithAchievements)
+            //Progresso: 66 slots na ordem exata real (ids validados nos conn27)
+            data.AddRange(BitConverter.GetBytes(66).Reverse());
+            for (int i = 0; i < 66; i++)
             {
-                data.AddRange(BitConverter.GetBytes(66).Reverse());
-                for (int i = 0; i < 66; i++)
-                {
-                    int id;
-                    if (i < 12)
-                        id = 0x15EF3C0 + i;
-                    else if (i < 63)
-                        id = 0x15EF3CF + (i - 12);
-                    else
-                        id = 0x15EF3CC + (i - 63);
-                    data.AddRange(BitConverter.GetBytes(id).Reverse());
-                    data.AddRange(BitConverter.GetBytes(0).Reverse());
-                }
-
-                //7.65: 7 u32 zero no final (captura real)
-                for (int i = 0; i < 7; i++)
-                    data.AddRange(BitConverter.GetBytes(0).Reverse());
-            }
-            else
-            {
-                //comportamento original UCS: lista de progresso vazia
+                int id;
+                if (i < 12)
+                    id = 0x15EF3C0 + i;
+                else if (i < 63)
+                    id = 0x15EF3CF + (i - 12);
+                else
+                    id = 0x15EF3CC + (i - 63);
+                data.AddRange(BitConverter.GetBytes(id).Reverse());
                 data.AddRange(BitConverter.GetBytes(0).Reverse());
             }
 
-            //7.65
-            data.AddInt32(0);
+            //3 listas npc vazias (12B) + 8 zeros finais = 20 bytes zero no fim (real)
+            for (int i = 0; i < 3; i++)
+                data.AddRange(BitConverter.GetBytes(0).Reverse());
+            data.AddRange(BitConverter.GetBytes(0).Reverse());
+            data.AddRange(BitConverter.GetBytes(0).Reverse());
 
             return data.ToArray();
         }
