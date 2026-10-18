@@ -231,6 +231,26 @@ namespace UCS.Logic
             }
             jsonData.Add("members", jsonMembersArray);
 
+            JArray jsonChatArray = new JArray();
+            foreach (var chatEntry in m_vChatMessages)
+            {
+                ChatStreamEntry cse = chatEntry as ChatStreamEntry;
+                if (cse == null)
+                    continue;
+                JObject o = new JObject();
+                o.Add("id", chatEntry.GetId());
+                o.Add("sender_id", chatEntry.GetSenderId());
+                o.Add("home_id", chatEntry.GetHomeId());
+                o.Add("sender_name", chatEntry.GetSenderName());
+                o.Add("sender_level", chatEntry.GetSenderLevel());
+                o.Add("sender_league", chatEntry.GetSenderLeagueId());
+                o.Add("sender_role", chatEntry.GetSenderRole());
+                o.Add("time", (long)chatEntry.GetMessageTime().Subtract(new DateTime(1970, 1, 1)).TotalSeconds);
+                o.Add("message", cse.GetMessage() ?? "");
+                jsonChatArray.Add(o);
+            }
+            jsonData.Add("chat", jsonChatArray);
+
             return JsonConvert.SerializeObject(jsonData);
         }
 
@@ -266,6 +286,26 @@ namespace UCS.Logic
                 AllianceMemberEntry member = new AllianceMemberEntry(id);
                 member.Load(jsonMember);
                 m_vAllianceMembers.Add(id, member);
+            }
+
+            if (jsonObject["chat"] != null)
+            {
+                JArray jsonChat = (JArray)jsonObject["chat"];
+                foreach (JObject c in jsonChat)
+                {
+                    ChatStreamEntry entry = new ChatStreamEntry();
+                    entry.SetId(c["id"].ToObject<int>());
+                    entry.SetSenderId(c["sender_id"].ToObject<long>());
+                    entry.SetHomeId(c["home_id"].ToObject<long>());
+                    entry.SetSenderName(c["sender_name"].ToObject<string>());
+                    entry.SetSenderLevel(c["sender_level"].ToObject<int>());
+                    entry.SetSenderLeagueId(c["sender_league"].ToObject<int>());
+                    entry.SetSenderRole(c["sender_role"].ToObject<int>());
+                    entry.SetMessage(c["message"].ToObject<string>());
+                    if (c["time"] != null)
+                        entry.SetMessageTime(new DateTime(1970, 1, 1).AddSeconds(c["time"].ToObject<long>()));
+                    AddChatMessage(entry);
+                }
             }
         }
 

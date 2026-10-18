@@ -88,6 +88,16 @@ namespace UCS.Logic
             return data.ToArray();
         }
 
+        public DateTime GetMessageTime()
+        {
+            return m_vMessageTime;
+        }
+
+        public void SetMessageTime(DateTime time)
+        {
+            m_vMessageTime = time;
+        }
+
         public void SetAvatar(ClientAvatar avatar)
         {
             m_vSenderId = avatar.GetId();
