@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
 using UCS.Helpers;
 using UCS.Logic;
 
@@ -37,6 +38,7 @@ namespace UCS.PacketProcessing
             pack.AddInt32(m_vServerCommandId);
             pack.AddRange(m_vCommand.Encode());
 
+            File.WriteAllBytes(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "generated-24111.bin"), pack.ToArray());
             SetData(pack.ToArray());
         }
     }

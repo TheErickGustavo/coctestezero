@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
 using UCS.Logic;
+using UCS.Core;
 using UCS.Helpers;
 
 namespace UCS.PacketProcessing
@@ -50,19 +52,53 @@ namespace UCS.PacketProcessing
 
             var allianceMembers = m_vAlliance.GetAllianceMembers();//avoid concurrent access issues
 
-            pack.AddRange(m_vAlliance.EncodeFullEntry());
-            pack.AddString(m_vAlliance.GetAllianceDescription());
-            pack.AddInt32(0x04);
-            pack.Add(1);
-            pack.AddInt32(0x03);
-            pack.AddInt32(0x0008A5DF);
-
+            //===== 7.65 REAL (validado byte-a-byte: conn27 #121/#133/#25/#87) =====
+            pack.AddInt64(m_vAlliance.GetAllianceId());
+            pack.AddString(m_vAlliance.GetAllianceName());
+            pack.AddInt32(m_vAlliance.GetAllianceBadgeData());
+            pack.AddInt32(m_vAlliance.GetAllianceType());            //real: 1
             pack.AddInt32(allianceMembers.Count);
-            foreach(var allianceMember in allianceMembers)
+            for (int i = 0; i < 9; i++) pack.AddInt32(0);            //real: 9 zeros
+            pack.AddInt32(1);                                        //real: 1
+            pack.AddString(m_vAlliance.GetAllianceDescription());    //len + descricao (real: texto livre)
+            pack.AddInt32(0);                                        //real: 0
+            //intro da lista de membros (real: u8 1 + i64 allId + i32 count)
+            pack.Add(1);
+            pack.AddInt64(m_vAlliance.GetAllianceId());
+            pack.AddInt32(allianceMembers.Count);
+            int memberOrder = 0;
+            foreach (var allianceMember in allianceMembers)
             {
-                pack.AddRange(allianceMember.Encode());
+                //entrada real de membro: i64 id, nome, 10x i32 (role, level, league, score, 0,0,0, order, 0,0), u8 1, u8 1, i64 id
+                pack.AddInt64(allianceMember.GetAvatarId());
+                Level memberLevel = ResourcesManager.GetPlayer(allianceMember.GetAvatarId());
+                string memberName = "?";
+                int memberExpLevel = 1, memberLeague = 0, memberScore = 0;
+                if (memberLevel != null && memberLevel.GetPlayerAvatar() != null)
+                {
+                    memberName = memberLevel.GetPlayerAvatar().GetAvatarName();
+                    memberExpLevel = memberLevel.GetPlayerAvatar().GetAvatarLevel();
+                    memberLeague = memberLevel.GetPlayerAvatar().GetLeagueId();
+                    memberScore = memberLevel.GetPlayerAvatar().GetScore();
+                }
+                pack.AddString(memberName);
+                pack.AddInt32(allianceMember.GetRole());
+                pack.AddInt32(memberExpLevel);
+                pack.AddInt32(memberLeague);
+                pack.AddInt32(memberScore);
+                pack.AddInt32(0);
+                pack.AddInt32(0);
+                pack.AddInt32(0);
+                pack.AddInt32(memberOrder);
+                pack.AddInt32(0);
+                pack.AddInt32(0);
+                pack.Add(1);
+                pack.Add(1);
+                pack.AddInt64(allianceMember.GetAvatarId());
+                memberOrder++;
             }
 
+            File.WriteAllBytes(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "generated-24301.bin"), pack.ToArray());
             SetData(pack.ToArray());
         }
     }

@@ -85,24 +85,15 @@ namespace UCS.Logic
         
         public byte[] EncodeHeader()
         {
-            //00 00 00 46 00 03 46 FE 
-            //00 00 00 0B 
-            //4C 61 20 54 65 61 6D 20 54 44 41 
-            //5E 00 2C 5A 
-            //00 
-            //00 00 00 02 
-            //00 00 00 01 
-            //FF FF FF FF
-
+            //===== 7.65 REAL (conn27 #123, 35B): i64 allId, nome, badge, u8 (membros-1), i32 1, i32 0 =====
             List<Byte> data = new List<Byte>();
 
             data.AddInt64(m_vAllianceId);
             data.AddString(m_vAllianceName);
             data.AddInt32(m_vAllianceBadgeData);
-            data.Add(0);
-            data.AddInt32(m_vAllianceLevel);
+            data.Add((byte)(m_vAllianceMembers.Count > 0 ? m_vAllianceMembers.Count - 1 : 0));
             data.AddInt32(1);
-            data.AddInt32(-1);
+            data.AddInt32(0);
 
             return data.ToArray();
         }
