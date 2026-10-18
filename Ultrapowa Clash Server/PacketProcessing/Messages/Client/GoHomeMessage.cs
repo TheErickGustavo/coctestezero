@@ -86,9 +86,9 @@ namespace UCS.PacketProcessing
             Alliance alliance = ObjectManager.GetAlliance(level.GetPlayerAvatar().GetAllianceId());
             //player.GetPlayerAvatar().Clean();
             PacketManager.ProcessOutgoingPacket(new OwnHomeDataMessage(this.Client, level));
-            //X1: o servidor real NAO manda 24311 no login/go-home (capturas conn27) - removido p/ ficar igual ao real
-            //if (alliance != null)
-            //    PacketManager.ProcessOutgoingPacket(new AllianceStreamMessage(this.Client, alliance));
+            //X3: historico do mural - reativado de proposito (o real nao manda 24311; ver LoginMessage.cs)
+            if (alliance != null)
+                PacketManager.ProcessOutgoingPacket(new AllianceStreamMessage(this.Client, alliance));
         }
     }
 }

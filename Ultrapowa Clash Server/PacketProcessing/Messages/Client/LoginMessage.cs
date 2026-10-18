@@ -166,9 +166,10 @@ namespace UCS.PacketProcessing
             if (alliance == null)
                 level.GetPlayerAvatar().SetAllianceId(0);
             PacketManager.ProcessOutgoingPacket(new OwnHomeDataMessage(this.Client, level));
-            //X1: o servidor real NAO manda 24311 no login (capturas conn27, conta com cla) - removido p/ ficar igual ao real
-            //if (alliance != null)
-            //    PacketManager.ProcessOutgoingPacket(new AllianceStreamMessage(this.Client, alliance));
+            //X3: historico do mural - o servidor real NAO manda 24311 (conn27), mas sem ele o mural some ao relogar.
+            //     Reativado de proposito (desvio consciente do real) p/ o mural persistir entre relogins do cliente.
+            if (alliance != null)
+                PacketManager.ProcessOutgoingPacket(new AllianceStreamMessage(this.Client, alliance));
         }
     }
 }
