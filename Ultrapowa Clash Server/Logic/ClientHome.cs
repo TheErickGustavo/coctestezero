@@ -66,7 +66,17 @@ namespace UCS.Logic
 
         public void SetHomeJSON(string json)
         {
-            m_vSerializedVillage = ZlibStream.CompressString(json);
+            // X2 v2: nivel 6 (Default) = cabecalho 78 9c, igual ao servidor real; o CompressString padrao
+            // do Ionic usa BestCompression (78 da).
+            using (MemoryStream ms = new MemoryStream())
+            {
+                using (ZlibStream zs = new ZlibStream(ms, CompressionMode.Compress, CompressionLevel.Default))
+                {
+                    byte[] bytes = Encoding.UTF8.GetBytes(json);
+                    zs.Write(bytes, 0, bytes.Length);
+                }
+                m_vSerializedVillage = ms.ToArray();
+            }
         }
 
         public void SetShieldDurationSeconds(int seconds)

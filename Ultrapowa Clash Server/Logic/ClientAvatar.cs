@@ -203,10 +203,12 @@ namespace UCS.Logic
                 data.AddRange(BitConverter.GetBytes(0).Reverse());
             }
 
-            //3 listas npc vazias (12B) + 8 zeros finais = 20 bytes zero no fim (real)
+            //X2 v5: 3 listas npc (stars/ouro/elixir) + 1 lista final = 4 grupos zerados.
+            //Real (24113 conn27, dono Archillionaire e visitante hi): apos as listas npc vem UM unico
+            //[i32 0] e depois o separador 01. Estavamos enviando 5 grupos (+4 bytes) - o parser do
+            //cliente lia o zero extra como inicio da cauda e desalinhava o avatar do visitante -> SIGSEGV.
             for (int i = 0; i < 3; i++)
                 data.AddRange(BitConverter.GetBytes(0).Reverse());
-            data.AddRange(BitConverter.GetBytes(0).Reverse());
             data.AddRange(BitConverter.GetBytes(0).Reverse());
 
             return data.ToArray();
