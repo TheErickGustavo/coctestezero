@@ -53,6 +53,20 @@ namespace UCS.Logic
             }
         }
 
+        // Doacao de cla: adiciona a unidade ao castelo sem mexer no contador do avatar
+        // do receptor (a tropa doada nao conta como exercito proprio do receptor).
+        public bool AddDonatedUnit(CombatItemData cd)
+        {
+            if (!CanAddUnit(cd))
+                return false;
+            int unitIndex = GetUnitTypeIndex(cd, -1);
+            if (unitIndex == -1)
+                m_vUnits.Add(new UnitSlot(cd, -1, 1));
+            else
+                m_vUnits[unitIndex].Count++;
+            return true;
+        }
+
         public bool CanAddUnit(CombatItemData cd)
         {
             bool result = false;

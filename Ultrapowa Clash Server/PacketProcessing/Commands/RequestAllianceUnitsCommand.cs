@@ -8,6 +8,7 @@ using UCS.Logic;
 using UCS.Helpers;
 using UCS.GameFiles;
 using UCS.Core;
+using UCS.Network;
 
 namespace UCS.PacketProcessing
 {
@@ -30,5 +31,47 @@ namespace UCS.PacketProcessing
         public byte FlagHasRequestMessage { get; set; } 
         public int MessageLength { get; set; } 
         public string Message { get; set; } 
-    }
+
+        public override void Execute(Level level)
+        {
+            try
+            {
+                var avatar = level.GetPlayerAvatar();
+                long allianceId = avatar.GetAllianceId();
+                if (allianceId <= 0)
+                    return;
+                var alliance = ObjectManager.GetAlliance(allianceId);
+                if (alliance == null)
+                    return;
+
+                string msg = (FlagHasRequestMessage == 0x01 && !string.IsNullOrEmpty(Message))
+                    ? (avatar.GetAvatarName() + " pediu tropas: " + Message)
+                    : (avatar.GetAvatarName() + " pediu tropas");
+
+                ChatStreamEntry cm = new ChatStreamEntry();
+                cm.SetId((int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds);
+                cm.SetAvatar(avatar);
+                cm.SetMessage(msg);
+
+                alliance.AddChatMessage(cm);
+
+                foreach (var onlinePlayer in ResourcesManager.GetOnlinePlayers())
+                {
+                    if (onlinePlayer.GetPlayerAvatar().GetAllianceId() == allianceId)
+                    {
+                        var p = new AllianceStreamEntryMessage(onlinePlayer.GetClient());
+                        p.SetStreamEntry(cm);
+                        PacketManager.ProcessOutgoingPacket(p);
+                    }
+                }
+                Debugger.WriteLine("[UCS] Pedido de tropas: " + avatar.GetAvatarName() + " (cla " + allianceId + ")");
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Debugger.WriteLine("[UCS] RequestAllianceUnits falhou: " + ex.Message);
+                Console.ResetColor();
+            }
+        }
+}
 }

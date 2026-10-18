@@ -35,10 +35,7 @@ namespace UCS.Logic
                 AddComponent(new UnitProductionComponent(this));
             if (GetBuildingData().HousingSpace[0] > 0)
             {
-                if (GetBuildingData().Bunker)
-                    AddComponent(new BunkerComponent());
-                else
-                    AddComponent(new UnitStorageComponent(this, 0));
+                AddComponent(new UnitStorageComponent(this, 0));
             }
             if (GetBuildingData().Damage[0] > 0)
                 AddComponent(new CombatComponent());

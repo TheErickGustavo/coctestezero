@@ -197,11 +197,8 @@ namespace UCS.Logic
                     var data = (BuildingData)GetData();
                     if (data.GetUnitStorageCapacity(level) > 0)
                     {
-                        if (!data.Bunker)
-                        {
-                            GetUnitStorageComponent().SetMaxCapacity(data.GetUnitStorageCapacity(level));
-                            GetUnitStorageComponent().SetEnabled(!IsConstructing());
-                        }
+                        GetUnitStorageComponent().SetMaxCapacity(data.GetUnitStorageCapacity(level));
+                        GetUnitStorageComponent().SetEnabled(!IsConstructing());
                     }
                 }
                 var resourceStorageComponent = GetResourceStorageComponent(true);
