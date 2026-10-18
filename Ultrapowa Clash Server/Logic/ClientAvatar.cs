@@ -34,8 +34,8 @@ namespace UCS.Logic
         private int m_vScore;
         private byte m_vIsAvatarNameSet;
         private int m_vLeagueId;
-        private int m_vDonatedTroops;   //X4b: tropas doadas (aparece no perfil/lista de membros)
-        private int m_vReceivedTroops;  //X4b: tropas recebidas
+        private int m_vDonatedTroops;   //X4b: tropas doadas em ESPACO de habitacao (aparece no perfil/lista de membros)
+        private int m_vReceivedTroops;  //X4b: tropas recebidas em ESPACO de habitacao
 
         public ClientAvatar() : base()
         {

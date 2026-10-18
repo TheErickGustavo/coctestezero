@@ -192,9 +192,11 @@ namespace UCS.Logic
                 return 0;
             }
 
-            // 4) contadores + progresso do pedido
-            donor.SetDonatedTroops(donor.GetDonatedTroops() + delivered);
-            requester.SetReceivedTroops(requester.GetReceivedTroops() + delivered);
+            // 4) contadores + progresso do pedido (contadores = ESPACO de habitacao, como no CoC real)
+            int donatedSpace = delivered * housing;
+            donor.SetDonatedTroops(donor.GetDonatedTroops() + donatedSpace);
+            requester.SetReceivedTroops(requester.GetReceivedTroops() + donatedSpace);
+            requester.SetAllianceCastleUsedCapacity(storage.GetUsedCapacity()); //X4b: sincroniza o avatar com o castelo (bubble da visita/limite)
             if (request != null)
             {
                 request.SetUsedSpace(used + delivered * housing);
