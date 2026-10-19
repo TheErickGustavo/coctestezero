@@ -122,8 +122,63 @@ namespace UCS.Core
 
         public static Level GetRandomPlayer()
         {
-            int index = m_vRandomSeed.Next(0, ResourcesManager.GetInMemoryLevels().Count);//accès concurrent KO
-            return ResourcesManager.GetInMemoryLevels().ElementAt(index);
+            List<Level> players = ResourcesManager.GetInMemoryLevels();
+            if (players.Count == 0)
+                return null;
+            int index;
+            lock (m_vDatabaseLock)
+                index = m_vRandomSeed.Next(0, players.Count);
+            return players[index];
+        }
+
+        // R-C4: seleciona apenas jogadores diferentes do atacante.
+        public static Level GetRandomPlayerExcluding(long excludedAvatarId)
+        {
+            List<Level> candidates = ResourcesManager.GetInMemoryLevels()
+                .Where(p => p != null && p.GetPlayerAvatar() != null &&
+                            p.GetPlayerAvatar().GetId() != excludedAvatarId)
+                .ToList();
+            if (candidates.Count == 0)
+                return null;
+
+            int index;
+            lock (m_vDatabaseLock)
+                index = m_vRandomSeed.Next(0, candidates.Count);
+            return candidates[index];
+        }
+
+        // Persiste imediatamente os participantes e os clans afetados pelo resultado PvP.
+        public static void SaveBattleChanges(Level attacker, Level defender)
+        {
+            lock (m_vDatabaseLock)
+            {
+                List<Level> players = new List<Level>();
+                if (attacker != null)
+                    players.Add(attacker);
+                if (defender != null && (attacker == null ||
+                    defender.GetPlayerAvatar().GetId() != attacker.GetPlayerAvatar().GetId()))
+                    players.Add(defender);
+                if (players.Count > 0)
+                    m_vDatabase.Save(players);
+
+                List<Alliance> alliances = new List<Alliance>();
+                foreach (Level player in players)
+                {
+                    if (player == null || player.GetPlayerAvatar() == null)
+                        continue;
+                    long allianceId = player.GetPlayerAvatar().GetAllianceId();
+                    if (allianceId == 0)
+                        continue;
+                    Alliance alliance = GetAlliance(allianceId);
+                    if (alliance != null && !alliances.Any(a => a.GetAllianceId() == allianceId))
+                    {
+                        alliance.RecalculateScore();
+                        alliances.Add(alliance);
+                    }
+                }
+                if (alliances.Count > 0)
+                    m_vDatabase.Save(alliances);
+            }
         }
 
         public static void LoadFingerPrint()
