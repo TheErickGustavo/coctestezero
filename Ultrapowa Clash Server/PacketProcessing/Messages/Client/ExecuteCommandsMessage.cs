@@ -69,11 +69,7 @@ namespace UCS.PacketProcessing
                                     //Debugger.WriteLine("finished processing of command " + obj.GetType().Name + player);
                                 }
                                 else
-                                {
-                                    // Nao abortar o loop de comandos por retorno null.
-                                    // Comando 603 agora esta registrado e consome seu proprio payload.
-                                    continue;
-                                }
+                                    break;
                             }
                             catch (Exception cmdEx)
                             {
