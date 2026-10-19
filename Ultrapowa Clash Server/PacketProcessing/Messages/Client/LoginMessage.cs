@@ -10,6 +10,7 @@ using UCS.Helpers;
 using UCS.Core;
 using UCS.Network;
 using UCS.Logic;
+using UCS.GameFiles;
 
 namespace UCS.PacketProcessing
 {
@@ -71,6 +72,40 @@ namespace UCS.PacketProcessing
                     br.ReadUInt32WithEndian();
                     br.ReadUInt32WithEndian();
                 }
+            }
+        }
+
+        //R-C5: dump de diagnostico - resolve o 'data' de cada predio da vila no CSV do
+        //servidor, para conferir se a ordem do CSV bate com a ordem de ids do jogo.
+        private static void DumpBuildingData(Level level)
+        {
+            try
+            {
+                System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                sb.Append("[UCS] R-C5 buildings: ");
+                for (int ci = 0; ci < 12; ci++)
+                {
+                    List<GameObject> objs = null;
+                    try { objs = level.GameObjectManager.GetGameObjects(ci); }
+                    catch { objs = null; }
+                    if (objs == null)
+                        continue;
+                    foreach (GameObject go in objs)
+                    {
+                        Building b = go as Building;
+                        if (b == null)
+                            continue;
+                        BuildingData bd = b.GetBuildingData();
+                        if (bd == null)
+                            continue;
+                        sb.Append("[" + bd.GetGlobalID() + "=>" + bd.TID + " lvl" + b.GetUpgradeLevel() + "]");
+                    }
+                }
+                Console.WriteLine(sb.ToString());
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[UCS] R-C5: erro no dump de buildings: " + ex.Message);
             }
         }
 
@@ -167,6 +202,7 @@ namespace UCS.PacketProcessing
                 level.GetPlayerAvatar().SetAllianceId(0);
             //R-C5: sincroniza o contador de tropas do avatar com o storage dos quartéis.
             UnitStorageComponent.SyncAvatarUnitCounts(level);
+            DumpBuildingData(level);
             PacketManager.ProcessOutgoingPacket(new OwnHomeDataMessage(this.Client, level));
             //X3: historico do mural - o servidor real NAO manda 24311 (conn27), mas sem ele o mural some ao relogar.
             //     Reativado de proposito (desvio consciente do real) p/ o mural persistir entre relogins do cliente.

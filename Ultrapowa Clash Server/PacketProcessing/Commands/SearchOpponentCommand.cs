@@ -46,6 +46,9 @@ namespace UCS.PacketProcessing
                 //tropas que o storage (o cliente mostra o avatar no multiplayer e o
                 //storage no acampamento; se divergem aparecem numeros diferentes).
                 UnitStorageComponent.SyncAvatarUnitCounts(level);
+                //R-T7: sincroniza as tropas do castelo do cla (avatar.AllianceUnits) para
+                //que aparecam no multiplayer/visita.
+                AllianceTroopService.SyncAllianceUnits(level);
                 LogTroopState(level);
                 var p = new EnemyHomeDataMessage(level.GetClient(), l, level);
                 PacketManager.ProcessOutgoingPacket(p);

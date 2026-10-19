@@ -192,6 +192,16 @@ namespace UCS.Logic
                     catch { }
                 }
             }
+            //R-C6: type 6 = ResourceStorageComponent (producao/coleta de elixir e ouro)
+            List<Component> resStorage = m_vComponents[6];
+            for (int i = 0; i < resStorage.Count; i++)
+            {
+                try
+                {
+                    resStorage[i].Tick();
+                }
+                catch { }
+            }
         }
     }
 }

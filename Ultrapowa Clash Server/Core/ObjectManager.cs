@@ -335,6 +335,25 @@ namespace UCS.Core
             return total;
         }
 
+        //R-C6: salva um player imediatamente (usado pelas acoes que mudam recursos,
+        //para que nada se perca ao fechar o jogo).
+        public static void SavePlayerNow(Level level)
+        {
+            if (level == null)
+                return;
+            try
+            {
+                lock (m_vDatabaseLock)
+                {
+                    m_vDatabase.Save(new List<Level> { level });
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[UCS] R-C6: falha ao salvar player: " + ex.Message);
+            }
+        }
+
         public static void LoadFingerPrint()
         {
             FingerPrint = new FingerPrint(@"gamefiles/fingerprint.json");    

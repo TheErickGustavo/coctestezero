@@ -94,6 +94,8 @@ namespace UCS.PacketProcessing
             //R-C5: sincroniza o contador de tropas do avatar com o storage antes de
             //mandar o 24101 (o acampamento mostra o storage, o multiplayer o avatar).
             UnitStorageComponent.SyncAvatarUnitCounts(level);
+            //R-T7: mantem as tropas do castelo do cla sincronizadas no avatar.
+            AllianceTroopService.SyncAllianceUnits(level);
             PacketManager.ProcessOutgoingPacket(new OwnHomeDataMessage(this.Client, level));
             //X3: historico do mural - reativado de proposito (o real nao manda 24311; ver LoginMessage.cs)
             if (alliance != null)
