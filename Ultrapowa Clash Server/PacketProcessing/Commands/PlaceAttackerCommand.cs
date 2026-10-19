@@ -34,16 +34,23 @@ namespace UCS.PacketProcessing
 
         public override void Execute(Level level)
         {
+            //R-C5: log do nivel da tropa colocada (o cliente informa o nivel exato).
+            Console.WriteLine("[UCS] R-C5 place: unit=" + (Unit != null ? Unit.GetName() : "?") +
+                " unknown1(nivel?)=" + Unknown1 + " x=" + X + " y=" + Y);
             List<Component> components = level.GetComponentManager().GetComponents(0);
             for (int i = 0; i < components.Count; i++)
             {
                 UnitStorageComponent c = (UnitStorageComponent)components[i];
+                //R-C5: remove de qualquer nivel (o storage e recarregado com nivel -1,
+                //mas tropas treinadas podem ter nivel real) e desconta do avatar.
+                if (c.IsSpellForge)
+                    continue;
                 if (c.GetUnitTypeIndex(Unit) != -1)
                 {
                     var storageCount = c.GetUnitCountByData(Unit);
                     if (storageCount >= 1)
                     {
-                        c.RemoveUnits(Unit, 1);
+                        c.RemoveUnitsAnyLevel(Unit, 1);
                         break;
                     }
                 }

@@ -284,23 +284,25 @@ namespace UCS.Logic
             else
                 unitProdObject.Add("unit_type",0);
 
-            if(m_vTimer != null)
-            {
+            //R-C5: o cliente 7.65 espera SEMPRE "t" e "slots" no unit_prod (mesmo com a
+            //fila vazia). Sem esses campos o parser do cliente entra em loop e o app
+            //morre com StackOverflow em GameApp.update (GLThread). Format conferido
+            //contra o golden 24101 (que abria sem crash).
+            if (m_vTimer != null)
                 unitProdObject.Add("t", m_vTimer.GetRemainingSeconds(GetParent().GetLevel().GetTime()));
-            }
+            else
+                unitProdObject.Add("t", 0);
 
-            if(GetSlotCount()>=1)
+            JArray unitJsonArray = new JArray();
+            foreach(var unit in m_vUnits)
             {
-                JArray unitJsonArray = new JArray();
-                foreach(var unit in m_vUnits)
-                {
-                    JObject unitJsonObject = new JObject();
-                    unitJsonObject.Add("id", unit.Data.GetGlobalID());
-                    unitJsonObject.Add("cnt", unit.Value);
-                    unitJsonArray.Add(unitJsonObject);
-                }
-                unitProdObject.Add("slots",unitJsonArray);
+                JObject unitJsonObject = new JObject();
+                unitJsonObject.Add("id", unit.Data.GetGlobalID());
+                unitJsonObject.Add("cnt", unit.Value);
+                unitJsonArray.Add(unitJsonObject);
             }
+            unitProdObject.Add("slots",unitJsonArray);
+
             jsonObject.Add("unit_prod", unitProdObject);
             return jsonObject;
         }

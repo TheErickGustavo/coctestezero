@@ -91,6 +91,9 @@ namespace UCS.PacketProcessing
 
             Alliance alliance = ObjectManager.GetAlliance(level.GetPlayerAvatar().GetAllianceId());
             //player.GetPlayerAvatar().Clean();
+            //R-C5: sincroniza o contador de tropas do avatar com o storage antes de
+            //mandar o 24101 (o acampamento mostra o storage, o multiplayer o avatar).
+            UnitStorageComponent.SyncAvatarUnitCounts(level);
             PacketManager.ProcessOutgoingPacket(new OwnHomeDataMessage(this.Client, level));
             //X3: historico do mural - reativado de proposito (o real nao manda 24311; ver LoginMessage.cs)
             if (alliance != null)
@@ -155,24 +158,21 @@ namespace UCS.PacketProcessing
                 bool attackerWon = destructionPct >= 50.0;
 
                 //CoC 2015: base 20/20 + bonus de destruicao (0.2 por %) e ajuste pela
-                //razao de trofeus: atacar quem tem MAIS trofeus rende menos ao ganhar e
-                //custa mais ao perder; atacar quem tem menos rende mais.
+                //razao de trofeus. Calibrado contra o cliente 7.65 (3 casos exatos):
+                //   ratio = trofeus do defensor / trofeus do atacante
+                //   ratio^13 -> quem tem menos trofeus perde menos e ganha mais
                 int bonus = (int)Math.Round(0.2 * destructionPct);
                 int attackerScore = attackerAvatar.GetScore();
                 int defenderScore = defenderAvatar.GetScore();
+                double ratio = attackerScore > 0 ? (double)defenderScore / attackerScore : 1.0;
+                if (ratio <= 0.0)
+                    ratio = 1.0;
+                double ratioFactor = Math.Pow(ratio, 13.0);
                 int delta;
                 if (attackerWon)
-                {
-                    double gain = (20 + bonus) *
-                        (defenderScore < attackerScore ? (double)defenderScore / attackerScore : 1.0);
-                    delta = (int)Math.Round(gain);
-                }
+                    delta = (int)Math.Round((20 + bonus) * ratioFactor);
                 else
-                {
-                    double loss = (20 - bonus) *
-                        (attackerScore > defenderScore ? (double)attackerScore / defenderScore : 1.0);
-                    delta = -(int)Math.Round(loss);
-                }
+                    delta = -(int)Math.Round((20 - bonus) / ratioFactor);
 
                 attackerAvatar.SetScore(Math.Max(0, attackerScore + delta));
                 defenderAvatar.SetScore(Math.Max(0, defenderScore - delta));

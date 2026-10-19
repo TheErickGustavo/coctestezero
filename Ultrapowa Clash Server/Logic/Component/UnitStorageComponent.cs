@@ -184,14 +184,15 @@ namespace UCS.Logic
         public void RemoveUnitsImpl(CombatItemData cd, int level, int count)
         {
             int unitIndex = GetUnitTypeIndex(cd, level);
-            if (unitIndex == -1)
-            {
-                //Do nothing, should be empty yet
-            }
-            else
+            //R-C5: desconta do avatar exatamente o que foi removido do storage (antes
+            //descontava o valor pedido, mesmo quando o storage tinha menos -> contador
+            //do avatar ficava menor que o real e o multiplayer mostrava menos tropas).
+            int removed = 0;
+            if (unitIndex != -1)
             {
                 UnitSlot us = m_vUnits[unitIndex];
-                if(us.Count <= count)
+                removed = us.Count <= count ? us.Count : count;
+                if (us.Count <= count)
                 {
                     m_vUnits.Remove(us);
                 }
@@ -199,10 +200,32 @@ namespace UCS.Logic
                 {
                     us.Count -= count;
                 }
+            }
+            if (removed > 0)
+            {
                 ClientAvatar ca = GetParent().GetLevel().GetPlayerAvatar();
                 int unitCount = ca.GetUnitCount(cd);
-                ca.SetUnitCount(cd, unitCount - count);
+                ca.SetUnitCount(cd, Math.Max(0, unitCount - removed));
             }
+        }
+
+        //R-C5: remove unidades de qualquer nivel (usado ao colocar tropas na batalha).
+        public bool RemoveUnitsAnyLevel(CombatItemData cd, int count)
+        {
+            for (int s = 0; s < m_vUnits.Count; s++)
+            {
+                if (m_vUnits[s].UnitData == cd && m_vUnits[s].Count > 0)
+                {
+                    int removed = m_vUnits[s].Count <= count ? m_vUnits[s].Count : count;
+                    m_vUnits[s].Count -= removed;
+                    if (m_vUnits[s].Count <= 0)
+                        m_vUnits.RemoveAt(s);
+                    ClientAvatar ca = GetParent().GetLevel().GetPlayerAvatar();
+                    ca.SetUnitCount(cd, Math.Max(0, ca.GetUnitCount(cd) - removed));
+                    return true;
+                }
+            }
+            return false;
         }
 
         public override void Load(JObject jsonObject)
@@ -252,6 +275,79 @@ namespace UCS.Logic
         public void SetMaxCapacity(int capacity)
         {
             m_vMaxCapacity = capacity;
+        }
+
+        //R-C5: o contador de tropas do avatar (por tipo) e os slots do storage (por
+        //tipo+nivel) podem divergir: o RemoveUnitsImpl so decrementa o avatar quando
+        //acha o slot com o nivel exato, e o Load() recarrega tudo com nivel -1. O
+        //cliente mostra o avatar no multiplayer (24107) e o storage no acampamento
+        //(24101), dai numeros diferentes (90 no acampamento x 86 no multiplayer).
+        //Funcao: reconstroi os contadores do avatar a partir do storage (fonte da
+        //verdade) e remove os slots zerados.
+        public static void SyncAvatarUnitCounts(Level level)
+        {
+            if (level == null)
+                return;
+            ClientAvatar ca = level.GetPlayerAvatar();
+            if (ca == null)
+                return;
+            try
+            {
+                Dictionary<int, int> totals = new Dictionary<int, int>();
+                List<Component> components = level.GetComponentManager().GetComponents(0);
+                for (int i = 0; i < components.Count; i++)
+                {
+                    UnitStorageComponent storage = components[i] as UnitStorageComponent;
+                    if (storage == null)
+                        continue;
+                    //R-C5: o castelo do cla (data 1000143) guarda as tropas DOADAS/pedidas:
+                    //elas NAO fazem parte do exercito do jogador (o AddDonatedUnit tambem
+                    //nao mexe no contador do avatar). Incluir aqui contaminaria o avatar.
+                    Building sb = storage.GetParent() as Building;
+                    if (sb != null && sb.GetBuildingData() != null &&
+                        sb.GetBuildingData().GetGlobalID() == 1000143)
+                        continue;
+                    if (storage.IsSpellForge)
+                        continue;
+                    for (int s = 0; s < storage.GetUnitSlotCount(); s++)
+                    {
+                        CombatItemData cd = storage.GetUnitType(s);
+                        if (cd == null)
+                            continue;
+                        int count = storage.GetUnitCount(s);
+                        if (count <= 0)
+                            continue;
+                        int id = cd.GetGlobalID();
+                        if (totals.ContainsKey(id))
+                            totals[id] += count;
+                        else
+                            totals[id] = count;
+                    }
+                }
+
+                //aplica os totais do storage no avatar (tipos que existem no storage).
+                //Tipos so do avatar (ex.: magos do tutorial) sao mantidos.
+                //R-C5: manipula os DataSlots direto - o SetUnitCount depende de comparacao
+                //de instancia (ds.Data == d) e falhava quando o Data vinhe de outra via.
+                List<DataSlot> avatarUnits = ca.GetUnits();
+                foreach (DataSlot ds in avatarUnits)
+                {
+                    if (ds.Data == null)
+                        continue;
+                    int gid = ds.Data.GetGlobalID();
+                    if (totals.ContainsKey(gid))
+                    {
+                        if (ds.Value != totals[gid])
+                            Console.WriteLine("[UCS] R-C5 sync: " + ds.Data.GetName() +
+                                " storage=" + totals[gid] + " avatar " + ds.Value + " -> " + totals[gid]);
+                        ds.Value = totals[gid];
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[UCS] R-C5: erro ao sincronizar contador de tropas: " + ex.Message);
+            }
         }
 
         public void SetStorageType(GameObject go)

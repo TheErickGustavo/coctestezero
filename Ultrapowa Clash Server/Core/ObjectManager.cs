@@ -25,6 +25,7 @@ namespace UCS.Core
     class ObjectManager
     {
         public System.Threading.Timer TimerReference;
+        public System.Threading.Timer TickTimerReference;
         public bool m_vTimerCanceled;
         private static readonly object m_vDatabaseLock = new object();
         private static long m_vAvatarSeed;
@@ -62,8 +63,30 @@ namespace UCS.Core
             System.Threading.Timer TimerItem = new System.Threading.Timer(TimerDelegate, null, 60000, 60000);
             TimerReference = TimerItem;
 
+            //R-C5: tick periodico dos levels online (1s). Sem isso a producao de tropas
+            //so avançava quando o jogador fazia alguma acao (e chegava atrasada).
+            System.Threading.TimerCallback TickDelegate = new System.Threading.TimerCallback(TickOnlineLevels);
+            System.Threading.Timer TickTimer = new System.Threading.Timer(TickDelegate, null, 1000, 1000);
+            TickTimerReference = TickTimer;
+
             Console.WriteLine("Database Sync started");
             m_vRandomSeed = new Random();
+        }
+
+        //R-C5: avanca o tempo dos jogadores online (producao de tropas, construcoes).
+        private static void TickOnlineLevels(object state)
+        {
+            try
+            {
+                foreach (Level level in ResourcesManager.GetOnlinePlayers())
+                {
+                    if (level == null)
+                        continue;
+                    try { level.Tick(); }
+                    catch { }
+                }
+            }
+            catch { }
         }
 
         public static Alliance CreateAlliance(long seed)
@@ -366,6 +389,8 @@ namespace UCS.Core
             if (m_vTimerCanceled)
             {
                 TimerReference.Dispose();
+                if (TickTimerReference != null)
+                    TickTimerReference.Dispose();
             }
         }
 
