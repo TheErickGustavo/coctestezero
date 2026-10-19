@@ -1,0 +1,532 @@
+From e4e364852bffb65b451a9d40dd1b5c896ee61074 Mon Sep 17 00:00:00 2001
+From: eg <eg@local>
+Date: Mon, 19 Oct 2026 05:15:22 -0300
+Subject: [PATCH] =?UTF-8?q?R-C:=20promote=20(14306),=20persistencia=20no?=
+ =?UTF-8?q?=20logout,=20cl=C3=A3=20score/n=C3=ADvel,=20liga=20por=20trof?=
+ =?UTF-8?q?=C3=A9us,=20TH=20level=20avatar,=20suporte=20N=20contas?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+
+diff --git a/Ultrapowa Clash Server/Core/ResourcesManager.cs b/Ultrapowa Clash Server/Core/ResourcesManager.cs
+index cef7f9e..f9f218b 100644
+--- a/Ultrapowa Clash Server/Core/ResourcesManager.cs	
++++ b/Ultrapowa Clash Server/Core/ResourcesManager.cs	
+@@ -110,9 +110,19 @@ public static bool IsPlayerOnline(Level l)
+         public static void DropClient(long socketHandle)
+         {
+             Client c;
+-            m_vClients.TryRemove(socketHandle, out c);
+-            if(c.GetLevel() != null)
+-                LogPlayerOut(c.GetLevel());
++            if (m_vClients.TryRemove(socketHandle, out c))
++            {
++                if (c.GetLevel() != null)
++                {
++                    try
++                    {
++                        m_vDatabase.Save(new List<Level> { c.GetLevel() });
++                        m_vDatabase.Save(ObjectManager.GetInMemoryAlliances());
++                    }
++                    catch { }
++                    LogPlayerOut(c.GetLevel());
++                }
++            }
+         }
+ 
+         public static void LoadLevel(Level level)
+diff --git a/Ultrapowa Clash Server/Logic/Alliance.cs b/Ultrapowa Clash Server/Logic/Alliance.cs
+index 6565d08..ad05520 100644
+--- a/Ultrapowa Clash Server/Logic/Alliance.cs	
++++ b/Ultrapowa Clash Server/Logic/Alliance.cs	
+@@ -51,9 +51,9 @@ public Alliance(long id)
+             m_vRequiredScore = 0;
+             m_vWarFrequency = 0;
+             m_vAllianceOrigin = 0x01E84857;
+-            m_vScore = 10000;
+-            m_vAllianceExperience = 8599;
+-            m_vAllianceLevel = 10;
++            m_vScore = 0;
++            m_vAllianceExperience = 0;
++            m_vAllianceLevel = 1;
+             m_vWonWars = 0;
+             m_vLostWars = 0;
+             m_vDrawWars = 0;
+diff --git a/Ultrapowa Clash Server/Logic/ClientAvatar.cs b/Ultrapowa Clash Server/Logic/ClientAvatar.cs
+index 0871fba..005966c 100644
+--- a/Ultrapowa Clash Server/Logic/ClientAvatar.cs	
++++ b/Ultrapowa Clash Server/Logic/ClientAvatar.cs	
+@@ -60,6 +60,7 @@ public ClientAvatar(long id) : this()
+             this.EndShieldTime = (int)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds + Convert.ToInt32(ConfigurationManager.AppSettings["startingShieldTime"]));
+             m_vCurrentGems = Convert.ToInt32(ConfigurationManager.AppSettings["startingGems"]);
+             m_vScore = Convert.ToInt32(ConfigurationManager.AppSettings["startingTrophies"]);
++            UpdateLeague();
+             //7.65: conta nova = tutorial do zero (captura real: tutSteps=0). 0x0A/0x0D fazia o cliente pular para o passo da batalha e crashar (StackOverflow GLThread)
+             this.TutorialStepsCount = 0x00;
+             //7.65: nome vazio ou com 9+ chars crasha o cliente (buffer de nome do cliente)
+@@ -124,7 +125,7 @@ public byte[] Encode()
+             data.AddInt32(m_vScore);     //F7 = trofeus (real: score; conferido com capturas: 859/4456 = linha de membro)
+             data.AddInt32(2);
+             data.AddInt32(2);
+-            data.AddInt32(3);
++            data.AddInt32(GetTownHallLevel() + 1); //TH level (1-based) para popup de troca de vila / placeholder
+             data.AddInt32(4);
+             //CONST37 real: 12x00, 01, 8x00, 02, 15x00
+             for (int i = 0; i < 37; i++)
+@@ -410,6 +411,7 @@ public void LoadFromJSON(string jsonString)
+             m_vExperience = jsonObject["experience"].ToObject<int>();
+             m_vCurrentGems = jsonObject["current_gems"].ToObject<int>();
+             m_vScore = jsonObject["score"].ToObject<int>();
++            UpdateLeague();
+             if (jsonObject["donated_troops"] != null)
+                 m_vDonatedTroops = jsonObject["donated_troops"].ToObject<int>();
+             if (jsonObject["received_troops"] != null)
+@@ -563,6 +565,36 @@ public void SetReceivedTroops(int count)
+             m_vReceivedTroops = count;
+         }
+ 
++        public void SetScore(int count)
++        {
++            m_vScore = count;
++            UpdateLeague();
++        }
++
++        public void UpdateLeague()
++        {
++            int s = m_vScore;
++            int id;
++            if (s < 400) id = 0;
++            else if (s < 500) id = 1;
++            else if (s < 600) id = 2;
++            else if (s < 800) id = 3;
++            else if (s < 1000) id = 4;
++            else if (s < 1200) id = 5;
++            else if (s < 1400) id = 6;
++            else if (s < 1600) id = 7;
++            else if (s < 1800) id = 8;
++            else if (s < 2000) id = 9;
++            else if (s < 2200) id = 10;
++            else if (s < 2400) id = 11;
++            else if (s < 2600) id = 12;
++            else if (s < 2800) id = 13;
++            else if (s < 3000) id = 14;
++            else if (s < 3200) id = 15;
++            else id = 16;
++            m_vLeagueId = id;
++        }
++
+         public void SetName(string name)
+         {
+             m_vAvatarName = name;
+diff --git a/Ultrapowa Clash Server/Logic/GoogleBindService.cs b/Ultrapowa Clash Server/Logic/GoogleBindService.cs
+new file mode 100644
+index 0000000..fb8b1f5
+--- /dev/null
++++ b/Ultrapowa Clash Server/Logic/GoogleBindService.cs	
+@@ -0,0 +1,99 @@
++using System;
++using System.Collections.Concurrent;
++using System.IO;
++using Newtonsoft.Json;
++
++namespace UCS.Logic
++{
++    //R-T7 (dev): o login Google do cliente e local/fake ("local-google").
++    //Este servico guarda a que jogador a identidade Google esta vinculada e
++    //decide qual vila oferecer no popup nativo "conta vinculada a outra vila -> carregar?".
++    static class GoogleBindService
++    {
++        private static ConcurrentDictionary<string, long> m_vBindings = new ConcurrentDictionary<string, long>();
++        private static ConcurrentDictionary<long, string> m_vPassTokens = new ConcurrentDictionary<long, string>();
++        private static string m_vFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "google_bind.json");
++
++        static GoogleBindService()
++        {
++            m_vPassTokens[1] = "local-pass-1";
++            m_vPassTokens[2] = "local-pass-2";
++            try
++            {
++                if (File.Exists(m_vFilePath))
++                {
++                    var loaded = JsonConvert.DeserializeObject<ConcurrentDictionary<string, long>>(File.ReadAllText(m_vFilePath));
++                    if (loaded != null)
++                        m_vBindings = loaded;
++                }
++            }
++            catch (Exception ex)
++            {
++                Console.WriteLine("[UCS] GoogleBindService: falha ao carregar google_bind.json: " + ex.Message);
++            }
++        }
++
++        public static long GetBoundPlayer(string googleServiceId)
++        {
++            long id;
++            if (!string.IsNullOrEmpty(googleServiceId) && m_vBindings.TryGetValue(googleServiceId, out id))
++                return id;
++            return 0;
++        }
++
++        public static void Bind(string googleServiceId, long playerId)
++        {
++            if (string.IsNullOrEmpty(googleServiceId))
++                return;
++            m_vBindings[googleServiceId] = playerId;
++            Save();
++        }
++
++        public static string GetPassToken(long playerId)
++        {
++            string token;
++            if (m_vPassTokens.TryGetValue(playerId, out token))
++                return token;
++            token = "local-pass-" + playerId;
++            m_vPassTokens[playerId] = token;
++            return token;
++        }
++
++        //Suporta N contas: retorna o proximo jogador (por id) diferente do atual.
++        public static long GetOtherPlayerId(long currentId)
++        {
++            try
++            {
++                var db = new UCS.Core.DatabaseManager();
++                long max = db.GetMaxPlayerId();
++                for (long i = currentId + 1; i <= max; i++)
++                {
++                    var lvl = db.GetAccount(i);
++                    if (lvl != null)
++                        return i;
++                }
++                for (long i = 1; i < currentId; i++)
++                {
++                    var lvl = db.GetAccount(i);
++                    if (lvl != null)
++                        return i;
++                }
++            }
++            catch { }
++            //Fallback para 2 contas
++            return currentId == 1 ? 2 : 1;
++        }
++
++        private static void Save()
++        {
++            try
++            {
++                File.WriteAllText(m_vFilePath, JsonConvert.SerializeObject(m_vBindings));
++            }
++            catch (Exception ex)
++            {
++                Console.WriteLine("[UCS] GoogleBindService: falha ao salvar google_bind.json: " + ex.Message);
++            }
++        }
++    }
++}
+diff --git a/Ultrapowa Clash Server/PacketProcessing/Client.cs b/Ultrapowa Clash Server/PacketProcessing/Client.cs
+index 2b188a0..d52f49b 100644
+--- a/Ultrapowa Clash Server/PacketProcessing/Client.cs	
++++ b/Ultrapowa Clash Server/PacketProcessing/Client.cs	
+@@ -312,6 +312,16 @@ public bool TryGetPacket(out Message p)
+                         //Update Decryption Key
+                         byte[] data = DataStream.Skip(7).Take(length).ToArray();
+                         Decrypt(data);
++                        var hex = new StringBuilder();
++                        var asc = new StringBuilder();
++                        foreach (byte b in data)
++                        {
++                            hex.Append(b.ToString("X2")).Append(' ');
++                            asc.Append(b >= 32 && b < 127 ? (char)b : '.');
++                        }
++                        Console.Write("[U] " + type.ToString() + " (" + data.Length + "b) ");
++                        Console.WriteLine(hex.ToString().TrimEnd());
++                        Console.WriteLine("    |" + asc.ToString() + "|");
+                     }
+                     DataStream.RemoveRange(0, 7 + length);
+                 }
+diff --git a/Ultrapowa Clash Server/PacketProcessing/MessageFactory.cs b/Ultrapowa Clash Server/PacketProcessing/MessageFactory.cs
+index 17e031c..0c3a3bd 100644
+--- a/Ultrapowa Clash Server/PacketProcessing/MessageFactory.cs	
++++ b/Ultrapowa Clash Server/PacketProcessing/MessageFactory.cs	
+@@ -25,12 +25,13 @@ static MessageFactory()
+             m_vMessages.Add(14102, typeof(ExecuteCommandsMessage));
+             m_vMessages.Add(14113, typeof(VisitHomeMessage));
+             m_vMessages.Add(14134, typeof(AttackNpcMessage));
++            m_vMessages.Add(14262, typeof(BindGoogleServiceAccountMessage));
+             //m_vMessages.Add(14136, );//Edit Clan Messages
+             m_vMessages.Add(14301, typeof(CreateAllianceMessage));
+             m_vMessages.Add(14302, typeof(AskForAllianceDataMessage));
+             m_vMessages.Add(14303, typeof(AskForJoinableAlliancesListMessage));
+             m_vMessages.Add(14305, typeof(JoinAllianceMessage));
+-            //m_vMessages.Add(14306, );//Promote
++            m_vMessages.Add(14306, typeof(PromoteAllianceMemberMessage));
+             m_vMessages.Add(14308, typeof(LeaveAllianceMessage));
+             m_vMessages.Add(14315, typeof(ChatToAllianceStreamMessage));
+             m_vMessages.Add(14324, typeof(SearchAlliancesMessage));
+diff --git a/Ultrapowa Clash Server/PacketProcessing/Messages/Client/BindGoogleServiceAccountMessage.cs b/Ultrapowa Clash Server/PacketProcessing/Messages/Client/BindGoogleServiceAccountMessage.cs
+new file mode 100644
+index 0000000..18fb9cf
+--- /dev/null
++++ b/Ultrapowa Clash Server/PacketProcessing/Messages/Client/BindGoogleServiceAccountMessage.cs	
+@@ -0,0 +1,76 @@
++using System;
++using System.Collections.Generic;
++using System.IO;
++using UCS.Core;
++using UCS.Helpers;
++using UCS.Logic;
++using UCS.Network;
++
++namespace UCS.PacketProcessing
++{
++    //Packet 14262 (cliente -> servidor). Formato 7.65 capturado byte-a-byte:
++    //  bool force + string googleServiceId + string accessToken
++    //O cliente chama isso no fluxo nativo "Login no Google+"/"Vincular dispositivo".
++    class BindGoogleServiceAccountMessage : Message
++    {
++        private bool m_vForce;
++        private string m_vGoogleServiceId;
++        private string m_vAccessToken;
++
++        public BindGoogleServiceAccountMessage(Client client, BinaryReader br) : base(client, br)
++        {
++        }
++
++        public override void Decode()
++        {
++            using (var br = new BinaryReader(new MemoryStream(GetData())))
++            {
++                m_vForce = br.ReadByte() != 0;
++                m_vGoogleServiceId = br.ReadScString();
++                m_vAccessToken = br.ReadScString();
++            }
++        }
++
++        public override void Process(Level level)
++        {
++            long currentId = level.GetPlayerAvatar().GetId();
++            long boundId = GoogleBindService.GetBoundPlayer(m_vGoogleServiceId);
++            long targetId = (boundId != 0 && boundId != currentId) ? boundId : GoogleBindService.GetOtherPlayerId(currentId);
++
++            Debugger.WriteLine("[UCS] BindGoogle: id=" + m_vGoogleServiceId + " force=" + m_vForce +
++                " atual=" + currentId + " bound=" + boundId + " target=" + targetId);
++
++            //Confirmacao do popup nativo: o jogador aceitou carregar a outra vila.
++            if (m_vForce && targetId != 0 && targetId != currentId)
++            {
++                GoogleBindService.Bind(m_vGoogleServiceId, targetId);
++                GoogleServiceAccountBoundMessage ok = new GoogleServiceAccountBoundMessage(this.Client);
++                ok.SetResultCode(0);
++                PacketManager.ProcessOutgoingPacket(ok);
++                return;
++            }
++
++            //Conta Google ja vinculada a outra vila -> popup nativo (nome + id).
++            if (targetId != 0 && targetId != currentId)
++            {
++                Level other = ResourcesManager.GetPlayer(targetId);
++                if (other != null)
++                {
++                    GoogleServiceAccountAlreadyBoundMessage ab = new GoogleServiceAccountAlreadyBoundMessage(this.Client);
++                    ab.SetGoogleServiceId(m_vGoogleServiceId);
++                    ab.SetAccountId(other.GetPlayerAvatar().GetId());
++                    ab.SetPassToken(GoogleBindService.GetPassToken(targetId));
++                    ab.SetAvatar(other.GetPlayerAvatar());
++                    PacketManager.ProcessOutgoingPacket(ab);
++                    return;
++                }
++            }
++
++            //Primeira vez: grava o vinculo com a vila atual e confirma.
++            GoogleBindService.Bind(m_vGoogleServiceId, currentId);
++            GoogleServiceAccountBoundMessage bound = new GoogleServiceAccountBoundMessage(this.Client);
++            bound.SetResultCode(0);
++            PacketManager.ProcessOutgoingPacket(bound);
++        }
++    }
++}
+diff --git a/Ultrapowa Clash Server/PacketProcessing/Messages/Client/PromoteAllianceMemberMessage.cs b/Ultrapowa Clash Server/PacketProcessing/Messages/Client/PromoteAllianceMemberMessage.cs
+new file mode 100644
+index 0000000..e44b608
+--- /dev/null
++++ b/Ultrapowa Clash Server/PacketProcessing/Messages/Client/PromoteAllianceMemberMessage.cs	
+@@ -0,0 +1,68 @@
++using System;
++using System.IO;
++using UCS.Core;
++using UCS.Helpers;
++using UCS.Logic;
++using UCS.Network;
++
++namespace UCS.PacketProcessing
++{
++    //Packet 14306 (cliente -> servidor): promover/rebaixar membro do cla.
++    //Payload capturado: i64 avatarId + i32 role (3 = Anciao, 4 = Colider, 1 = Membro).
++    class PromoteAllianceMemberMessage : Message
++    {
++        private long m_vAvatarId;
++        private int m_vRole;
++
++        public PromoteAllianceMemberMessage(Client client, BinaryReader br) : base(client, br)
++        {
++        }
++
++        public override void Decode()
++        {
++            using (var br = new BinaryReader(new MemoryStream(GetData())))
++            {
++                m_vAvatarId = br.ReadInt64WithEndian();
++                m_vRole = br.ReadInt32WithEndian();
++            }
++        }
++
++        public override void Process(Level level)
++        {
++            Level targetAccount = ResourcesManager.GetPlayer(m_vAvatarId, true);
++            if (targetAccount == null)
++                return;
++
++            var requesterAvatar = level.GetPlayerAvatar();
++            var targetAvatar = targetAccount.GetPlayerAvatar();
++
++            long requesterAllianceId = requesterAvatar.GetAllianceId();
++            long targetAllianceId = targetAvatar.GetAllianceId();
++
++            if (requesterAllianceId <= 0 || requesterAllianceId != targetAllianceId)
++                return;
++
++            Alliance alliance = ObjectManager.GetAlliance(requesterAllianceId);
++            if (alliance == null)
++                return;
++
++            var requesterMember = alliance.GetAllianceMember(requesterAvatar.GetId());
++            var targetMember = alliance.GetAllianceMember(m_vAvatarId);
++            if (requesterMember == null || targetMember == null)
++                return;
++
++            //Apenas quem tem cargo superior pode alterar o cargo do alvo.
++            if (!targetMember.HasLowerRoleThan(requesterMember.GetRole()))
++                return;
++
++            //Nao permite promover acima do proprio cargo.
++            if (m_vRole >= requesterMember.GetRole())
++                return;
++
++            targetMember.SetRole(m_vRole);
++
++            Debugger.WriteLine("[UCS] Promote: " + targetAvatar.GetAvatarName() + " -> role " + m_vRole +
++                " por " + requesterAvatar.GetAvatarName());
++        }
++    }
++}
+\ No newline at end of file
+diff --git a/Ultrapowa Clash Server/PacketProcessing/Messages/Server/GoogleServiceAccountAlreadyBoundMessage.cs b/Ultrapowa Clash Server/PacketProcessing/Messages/Server/GoogleServiceAccountAlreadyBoundMessage.cs
+new file mode 100644
+index 0000000..a2ab2ae
+--- /dev/null
++++ b/Ultrapowa Clash Server/PacketProcessing/Messages/Server/GoogleServiceAccountAlreadyBoundMessage.cs	
+@@ -0,0 +1,65 @@
++using System;
++using System.Collections.Generic;
++using UCS.Helpers;
++using UCS.Logic;
++
++namespace UCS.PacketProcessing
++{
++    //Packet 20262 (servidor -> cliente): a conta Google ja esta vinculada a outra vila.
++    //O cliente mostra o popup nativo "carregar a outra vila?" com nome + id.
++    //Candidato 7.65; se o cliente ignorar, testar 24262.
++    class GoogleServiceAccountAlreadyBoundMessage : Message
++    {
++        private string m_vGoogleServiceId;
++        private long m_vAccountId;
++        private string m_vPassToken;
++        private ClientAvatar m_vAvatar;
++
++        public GoogleServiceAccountAlreadyBoundMessage(Client client) : base(client)
++        {
++            SetMessageType(24262);
++            SetMessageVersion(0);
++            m_vGoogleServiceId = "";
++            m_vPassToken = "";
++        }
++
++        public void SetGoogleServiceId(string value)
++        {
++            m_vGoogleServiceId = value;
++        }
++
++        public void SetAccountId(long value)
++        {
++            m_vAccountId = value;
++        }
++
++        public void SetPassToken(string value)
++        {
++            m_vPassToken = value;
++        }
++
++        public void SetAvatar(ClientAvatar avatar)
++        {
++            m_vAvatar = avatar;
++        }
++
++        public override void Encode()
++        {
++            List<Byte> pack = new List<Byte>();
++            pack.AddString(m_vGoogleServiceId);
++            if (m_vAccountId != 0)
++            {
++                pack.Add(1);
++                pack.AddInt64(m_vAccountId);
++            }
++            else
++            {
++                pack.Add(0);
++            }
++            pack.AddString(m_vPassToken);
++            if (m_vAvatar != null)
++                pack.AddRange(m_vAvatar.Encode());
++            SetData(pack.ToArray());
++        }
++    }
++}
+diff --git a/Ultrapowa Clash Server/PacketProcessing/Messages/Server/GoogleServiceAccountBoundMessage.cs b/Ultrapowa Clash Server/PacketProcessing/Messages/Server/GoogleServiceAccountBoundMessage.cs
+new file mode 100644
+index 0000000..00cc0a9
+--- /dev/null
++++ b/Ultrapowa Clash Server/PacketProcessing/Messages/Server/GoogleServiceAccountBoundMessage.cs	
+@@ -0,0 +1,32 @@
++using System;
++using System.Collections.Generic;
++using UCS.Helpers;
++using UCS.Logic;
++
++namespace UCS.PacketProcessing
++{
++    //Packet 20261 (servidor -> cliente): resultado do bind Google.
++    //Candidato 7.65; se o cliente ignorar, testar 24261.
++    class GoogleServiceAccountBoundMessage : Message
++    {
++        private int m_vResultCode;
++
++        public GoogleServiceAccountBoundMessage(Client client) : base(client)
++        {
++            SetMessageType(24261);
++            SetMessageVersion(0);
++        }
++
++        public void SetResultCode(int code)
++        {
++            m_vResultCode = code;
++        }
++
++        public override void Encode()
++        {
++            List<Byte> pack = new List<Byte>();
++            pack.AddInt32(m_vResultCode);
++            SetData(pack.ToArray());
++        }
++    }
++}
