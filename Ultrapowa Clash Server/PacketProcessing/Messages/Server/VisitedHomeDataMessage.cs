@@ -34,6 +34,10 @@ namespace UCS.PacketProcessing
 
             ClientHome ch = new ClientHome(m_vOwnerLevel.GetPlayerAvatar().GetId());
             ch.SetShieldDurationSeconds(m_vOwnerLevel.GetPlayerAvatar().RemainingShieldTime);
+            // X4b-sync: atualiza alliance_units/capacidade do avatar do dono a partir do castelo
+            // (o cliente le a bolha do castelo no avatar; sem isso, tirar tropas do castelo
+            // manualmente deixa a bolha desatualizada — caso dos 9 magos)
+            AllianceTroopService.SyncAllianceUnits(m_vOwnerLevel);
             // X2 v2: o JSON da VISITA no servidor real difere do JSON da casa (ver PrepareVisitHomeJSON)
             string visitJson = PrepareVisitHomeJSON(m_vOwnerLevel.SaveToJSON());
             File.WriteAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "generated-24113.json"), visitJson);

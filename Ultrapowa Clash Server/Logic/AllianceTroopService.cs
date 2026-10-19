@@ -224,7 +224,11 @@ namespace UCS.Logic
             int fit = (housing > 0 && capacity > 0) ? (capacity - used) / housing : 0;
             if (fit <= 0)
             {
-                error = "o castelo de " + requester.GetAvatarName() + " esta cheio (" + used + "/" + capacity + ")";
+                int free = capacity - used;
+                if (free > 0)
+                    error = "espaco vago (" + free + ") nao cabe " + TroopNameParser.GetDisplayName(cd) + " (" + housing + "); castelo " + used + "/" + capacity;
+                else
+                    error = "o castelo de " + requester.GetAvatarName() + " esta cheio (" + used + "/" + capacity + ")";
                 return 0;
             }
 
