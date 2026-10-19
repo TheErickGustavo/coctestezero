@@ -193,5 +193,74 @@ namespace UCS.Logic
             }
             return string.Join(", ", names);
         }
+
+        // X4c: extrai tropas COM quantidades de um texto (ex: "5 gigantes e 2 magos" ->
+        // [(4000003,5),(4000006,2)]). Numero ANTES do nome define a quantidade (sem numero = 1).
+        // Termos desconhecidos ("quero", "e", "casa"...) sao ignorados; numero solto no fim nao conta.
+        public static List<KeyValuePair<int, int>> ExtractWantedCounts(string text)
+        {
+            List<KeyValuePair<int, int>> result = new List<KeyValuePair<int, int>>();
+            if (string.IsNullOrEmpty(text))
+                return result;
+            EnsureInit();
+            string[] tokens = Normalize(text).Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            int pendingCount = 0;
+            bool hasPending = false;
+            int i = 0;
+            while (i < tokens.Length)
+            {
+                int num;
+                if (int.TryParse(tokens[i], out num) && num > 0)
+                {
+                    pendingCount = Math.Min(num, 99);
+                    hasPending = true;
+                    i++;
+                    continue;
+                }
+                bool matched = false;
+                int maxLen = Math.Min(3, tokens.Length - i);
+                for (int len = maxLen; len >= 1 && !matched; len--)
+                {
+                    string candidate = string.Join(" ", tokens, i, len);
+                    int id;
+                    if (m_vAliasToUnitId.TryGetValue(candidate, out id))
+                    {
+                        int count = hasPending ? Math.Max(1, pendingCount) : 1;
+                        int idx = result.FindIndex(kv => kv.Key == id);
+                        if (idx >= 0)
+                            result[idx] = new KeyValuePair<int, int>(id, Math.Max(result[idx].Value, count));
+                        else
+                            result.Add(new KeyValuePair<int, int>(id, count));
+                        pendingCount = 0;
+                        hasPending = false;
+                        i += len;
+                        matched = true;
+                    }
+                }
+                if (!matched)
+                    i++;
+            }
+            return result;
+        }
+
+        // X4c: exibe uma lista (id, qtd) como "5x Gigante, 2x Mago".
+        public static string DescribeWantedCounts(List<KeyValuePair<int, int>> wantedCounts)
+        {
+            EnsureInit();
+            if (wantedCounts == null || wantedCounts.Count == 0)
+                return "";
+            List<string> parts = new List<string>();
+            foreach (KeyValuePair<int, int> kv in wantedCounts)
+            {
+                string n;
+                if (!m_vUnitDisplayName.TryGetValue(kv.Key, out n))
+                {
+                    CharacterData cd = ObjectManager.DataTables.GetDataById(kv.Key) as CharacterData;
+                    n = (cd != null) ? cd.GetName() : ("tropa " + kv.Key);
+                }
+                parts.Add(kv.Value + "x " + n);
+            }
+            return string.Join(", ", parts);
+        }
     }
 }

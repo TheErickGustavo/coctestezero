@@ -164,6 +164,16 @@ namespace UCS.Logic
             }
         }
 
+        // X4c: quantas unidades desse tipo o castelo do solicitante ja tem (acumula slots iguais)
+        public static int CountDonatedTypeInCastle(Level requesterLevel, CombatItemData cd)
+        {
+            Building castle;
+            UnitStorageComponent storage = GetCastleStorage(requesterLevel, out castle);
+            if (storage == null)
+                return 0;
+            return storage.GetUnitCountByData(cd);
+        }
+
         // Fluxo completo: valida o pedido, tira do acampamento do doador, entrega no castelo do
         // solicitante, atualiza contadores e o progresso do pedido. Retorna quantas unidades foram
         // entregues; se 0, 'error' diz o motivo.
@@ -184,10 +194,20 @@ namespace UCS.Logic
             }
 
             // 1) o solicitante pediu esse tipo de tropa?
+            //    X4c: regra do CoC 2015 - qualquer tropa pode ser doada no espaco VAZIO do castelo.
+            //    A restricao "pediu apenas X/Y" so vale quando a tropa NAO cabe no espaco vago.
             if (request != null && request.GetWantedUnits().Count > 0 && !request.GetWantedUnits().Contains(cd.GetGlobalID()))
             {
-                error = request.GetRequesterName() + " pediu apenas: " + TroopNameParser.DescribeWanted(request.GetWantedUnits());
-                return 0;
+                Building castleChk;
+                UnitStorageComponent storageChk = GetCastleStorage(requesterLevel, out castleChk);
+                int freeAll = (storageChk != null) ? storageChk.GetMaxCapacity() - storageChk.GetUsedCapacity() : 0;
+                if (cd.GetHousingSpace() > freeAll)
+                {
+                    error = "espaco vago (" + freeAll + ") nao cabe " + TroopNameParser.GetDisplayName(cd) +
+                            "; " + request.GetRequesterName() + " pediu apenas: " + TroopNameParser.DescribeWanted(request.GetWantedUnits());
+                    return 0;
+                }
+                //cabe no espaco vago: doacao livre permitida; segue o fluxo normal
             }
 
             // 2) espaco no castelo do solicitante
@@ -216,7 +236,26 @@ namespace UCS.Logic
                 return 0;
             }
 
-            int planned = Math.Min(requestedCount <= 0 ? 1 : requestedCount, Math.Min(available, fit));
+            // X4c: se o pedido define quantidade exata p/ essa tropa, clampa por ela
+            // (ex: pediu "5 gigantes", ja foi doado 3, entao resta no maximo 2)
+            int typeLimit = int.MaxValue;
+            if (request != null)
+            {
+                KeyValuePair<int, int> entry = request.GetWantedCounts().Find(kv => kv.Key == cd.GetGlobalID());
+                if (entry.Key == cd.GetGlobalID() && entry.Value > 0)
+                {
+                    int alreadyGiven = CountDonatedTypeInCastle(requesterLevel, cd);
+                    typeLimit = Math.Max(entry.Value - alreadyGiven, 0);
+                    if (typeLimit == 0)
+                    {
+                        error = TroopNameParser.GetDisplayName(cd) + ": o pedido de " + request.GetRequesterName() +
+                                " ja esta completo (" + entry.Value + "x)";
+                        return 0;
+                    }
+                }
+            }
+
+            int planned = Math.Min(requestedCount <= 0 ? 1 : requestedCount, Math.Min(Math.Min(available, fit), typeLimit));
             int removed = RemoveFromArmyCamps(donorLevel, cd, planned);
             int delivered = DeliverToCastle(requesterLevel, cd, removed);
             if (delivered <= 0)

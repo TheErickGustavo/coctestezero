@@ -49,6 +49,9 @@ namespace UCS.PacketProcessing
                 //X4b: extrai as tropas citadas na mensagem (ex: "dragao e barbaro" -> [dragao, barbaro])
                 List<int> wanted = TroopNameParser.ExtractUnitIds(rawMessage);
 
+                //X4c: quantidades exatas quando citadas ("5 gigantes e 2 magos" -> [(gigante,5),(mago,2)])
+                List<KeyValuePair<int, int>> wantedCounts = TroopNameParser.ExtractWantedCounts(rawMessage);
+
                 //capacidade do castelo (housing): predio do jogador; fallback pro avatar
                 int capacity = 0, used = 0;
                 Building castle;
@@ -75,16 +78,26 @@ namespace UCS.PacketProcessing
                 request.SetRequesterName(avatar.GetAvatarName());
                 request.SetMessage(rawMessage);
                 request.SetWantedUnits(wanted);
+                request.SetWantedCounts(wantedCounts);
                 request.SetCapacity(capacity);
                 request.SetUsedSpace(used);
                 request.SetTimestamp((int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds);
                 alliance.AddOrUpdateTroopRequest(request);
 
-                string msg = avatar.GetAvatarName() + " pediu tropas (" + used + "/" + capacity + ")" + (rawMessage.Length > 0 ? ": " + rawMessage : "");
+                //X4c: anuncio do mural mostra as quantidades quando houver ("pediu 5x Gigante, 2x Mago")
+                string countAnnounce = TroopNameParser.DescribeWantedCounts(wantedCounts);
+                string wantedDesc = (wanted.Count > 0)
+                    ? ((countAnnounce.Length > 0) ? countAnnounce : TroopNameParser.DescribeWanted(wanted))
+                    : "";
+                string msg = avatar.GetAvatarName() + " pediu tropas (" + used + "/" + capacity + ")" +
+                    (wantedDesc.Length > 0 ? ": " + wantedDesc : (rawMessage.Length > 0 ? ": " + rawMessage : ""));
                 ChatBroadcast.ToAlliance(alliance, ChatBroadcast.MakeEntry(avatar, msg));
 
+                //X4c: log do servidor mostra qtds quando houver
+                string countText = TroopNameParser.DescribeWantedCounts(wantedCounts);
                 string wantedText = (wanted.Count > 0) ? TroopNameParser.DescribeWanted(wanted) : "qualquer tropa";
-                Debugger.WriteLine("[UCS] Pedido de tropas: " + avatar.GetAvatarName() + " (cla " + allianceId + ") quer: " + wantedText + " (" + used + "/" + capacity + ")");
+                Debugger.WriteLine("[UCS] Pedido de tropas: " + avatar.GetAvatarName() + " (cla " + allianceId + ") quer: " + wantedText +
+                    ((countText.Length > 0) ? " [" + countText + "]" : "") + " (" + used + "/" + capacity + ")");
             }
             catch (Exception ex)
             {
