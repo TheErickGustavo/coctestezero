@@ -27,7 +27,17 @@ namespace UCS.PacketProcessing
                 return;
 
             level.RecordEndOfBattle(ResultValue);
-            Console.WriteLine("[UCS] R-C4: comando 603 recebido, value=" + ResultValue +
+            string stamp = DateTime.Now.ToString("HH:mm:ss.fff");
+            //R-C4b: calibracao da escala do 603 -> arquivo proprio, uma linha por 603.
+            try
+            {
+                File.AppendAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "r-c4-603.log"),
+                    stamp + " attacker=" + level.GetPlayerAvatar().GetId() +
+                    " defender=" + level.BattleDefenderId +
+                    " value=" + ResultValue + Environment.NewLine);
+            }
+            catch { }
+            Console.WriteLine("[UCS] R-C4: " + stamp + " comando 603 recebido, value=" + ResultValue +
                 ", pendingPvP=" + level.HasPendingPvpBattle);
         }
     }

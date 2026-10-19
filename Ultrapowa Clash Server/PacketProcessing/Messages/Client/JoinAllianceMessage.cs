@@ -47,6 +47,9 @@ namespace UCS.PacketProcessing
                     availableServerCommandMessage.SetCommand(joinAllianceCommand);
                     PacketManager.ProcessOutgoingPacket(availableServerCommandMessage);
                     PacketManager.ProcessOutgoingPacket(new AllianceStreamMessage(this.Client, alliance));
+                    //R-C4b: o score do cla e a soma dos trofeus dos membros; ao entrar
+                    //alguem o score sobe na hora.
+                    ObjectManager.RefreshAllianceScore(alliance.GetAllianceId());
                 }
             }
         }

@@ -116,6 +116,18 @@ namespace UCS.PacketProcessing
                     return;
                 }
 
+                //R-C4b: sem o comando 603 o cliente NAO entrou em combate (apenas procurou
+                //uma vila e voltou). Antes isso aplicava -20/+20 de trofeus a cada
+                //"procurar vila -> sair", corrompendo a economia. Agora so liquida
+                //quando houve mesmo o 603.
+                if (!hasResult)
+                {
+                    Console.WriteLine("[UCS] R-C4: sem 603 (sem combate) attacker=" +
+                        attacker.GetPlayerAvatar().GetId() + " defender=" + defenderId +
+                        " -> resultado descartado, trofeus intactos");
+                    return;
+                }
+
                 try { defender = ResourcesManager.GetPlayer(defenderId, true); }
                 catch (Exception loadEx)
                 {
@@ -130,28 +142,48 @@ namespace UCS.PacketProcessing
                     return;
                 }
 
-                // Ausencia do comando 603 equivale a desistência. O limiar 500 pressupoe
-                // payload em decimos de percentual; stars nao estao presentes no payload
-                // de 4 bytes capturado, portanto nao afirmamos detectar estrelas aqui.
-                bool attackerLost = !hasResult || resultValue < 500;
+                //R-C4b: o payload do 603 sao "damage points" (HP danificado), nao percentual.
+                //A % de destruicao e estimada dividindo pelo HP total atacavel da vila do
+                //defensor (muros nao contam). 1 estrela = 50% de destruicao.
                 ClientAvatar attackerAvatar = attacker.GetPlayerAvatar();
                 ClientAvatar defenderAvatar = defender.GetPlayerAvatar();
 
-                if (attackerLost)
+                int hpTotal = ObjectManager.GetAttachableHpTotal(defender);
+                double destructionPct = hpTotal > 0 ? (100.0 * resultValue / hpTotal) : 0.0;
+                if (destructionPct > 100.0)
+                    destructionPct = 100.0;
+                bool attackerWon = destructionPct >= 50.0;
+
+                //CoC 2015: base 20/20 + bonus de destruicao (0.2 por %) e ajuste pela
+                //razao de trofeus: atacar quem tem MAIS trofeus rende menos ao ganhar e
+                //custa mais ao perder; atacar quem tem menos rende mais.
+                int bonus = (int)Math.Round(0.2 * destructionPct);
+                int attackerScore = attackerAvatar.GetScore();
+                int defenderScore = defenderAvatar.GetScore();
+                int delta;
+                if (attackerWon)
                 {
-                    attackerAvatar.SetScore(Math.Max(0, attackerAvatar.GetScore() - 20));
-                    defenderAvatar.SetScore(defenderAvatar.GetScore() + 20);
+                    double gain = (20 + bonus) *
+                        (defenderScore < attackerScore ? (double)defenderScore / attackerScore : 1.0);
+                    delta = (int)Math.Round(gain);
                 }
                 else
                 {
-                    attackerAvatar.SetScore(attackerAvatar.GetScore() + 20);
-                    defenderAvatar.SetScore(Math.Max(0, defenderAvatar.GetScore() - 20));
+                    double loss = (20 - bonus) *
+                        (attackerScore > defenderScore ? (double)attackerScore / defenderScore : 1.0);
+                    delta = -(int)Math.Round(loss);
                 }
+
+                attackerAvatar.SetScore(Math.Max(0, attackerScore + delta));
+                defenderAvatar.SetScore(Math.Max(0, defenderScore - delta));
 
                 Console.WriteLine("[UCS] R-C4: PvP finalizado attacker=" +
                     attackerAvatar.GetId() + " defender=" + defenderId +
-                    " endValue=" + (hasResult ? resultValue.ToString() : "missing") +
-                    " outcome=" + (attackerLost ? "loss" : "win") +
+                    " damagePoints=" + resultValue +
+                    " hpTotalDefensor=" + hpTotal +
+                    " destrucao=" + destructionPct.ToString("0.00") + "%" +
+                    " outcome=" + (attackerWon ? "win" : "loss") +
+                    " delta=" + delta +
                     " scores=" + attackerAvatar.GetScore() + "/" + defenderAvatar.GetScore());
 
                 ObjectManager.SaveBattleChanges(attacker, defender);

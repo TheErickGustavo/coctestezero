@@ -17,6 +17,7 @@ using Newtonsoft.Json;
 using UCS.PacketProcessing;
 using UCS.Logic;
 using UCS.GameFiles;
+using UCS.Network;
 
 namespace UCS.Core
 
@@ -138,6 +139,33 @@ namespace UCS.Core
                 .Where(p => p != null && p.GetPlayerAvatar() != null &&
                             p.GetPlayerAvatar().GetId() != excludedAvatarId)
                 .ToList();
+
+            //R-C4b: se o unico adversario estiver offline, ele nao esta em memoria e o
+            //"procurar vila" ficava em tela de nuvem infinita (nenhum 24107 era enviado).
+            //Fallback: carrega um jogador do banco para servir de oponente.
+            if (candidates.Count == 0)
+            {
+                try
+                {
+                    long maxId = m_vDatabase.GetMaxPlayerId();
+                    for (long id = 1; id <= maxId; id++)
+                    {
+                        if (id == excludedAvatarId)
+                            continue;
+                        Level level = ResourcesManager.GetPlayer(id, true);
+                        if (level != null && level.GetPlayerAvatar() != null)
+                        {
+                            candidates.Add(level);
+                            break;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("[UCS] R-C4: falha ao buscar oponente no banco: " + ex.Message);
+                }
+            }
+
             if (candidates.Count == 0)
                 return null;
 
@@ -179,6 +207,109 @@ namespace UCS.Core
                 if (alliances.Count > 0)
                     m_vDatabase.Save(alliances);
             }
+
+            //R-C4b: reenvia o 24301 (AllianceData) para os membros online dos clans
+            //afetados, para o "Meu Cla" na tela mostrar o score novo sem relogar.
+            foreach (Level player in new List<Level> { attacker, defender })
+            {
+                if (player == null || player.GetPlayerAvatar() == null)
+                    continue;
+                long allianceId = player.GetPlayerAvatar().GetAllianceId();
+                if (allianceId <= 0)
+                    continue;
+                Alliance alliance = GetAlliance(allianceId);
+                if (alliance != null)
+                    SendAllianceDataToMembers(alliance);
+            }
+        }
+
+        //R-C4b: reenvia o 24301 do cla para todos os membros online dele.
+        public static void SendAllianceDataToMembers(Alliance alliance)
+        {
+            if (alliance == null)
+                return;
+            try
+            {
+                foreach (Level onlinePlayer in ResourcesManager.GetOnlinePlayers())
+                {
+                    if (onlinePlayer.GetPlayerAvatar() == null)
+                        continue;
+                    if (onlinePlayer.GetPlayerAvatar().GetAllianceId() != alliance.GetAllianceId())
+                        continue;
+                    if (onlinePlayer.GetClient() == null)
+                        continue;
+                    PacketManager.ProcessOutgoingPacket(
+                        new AllianceDataMessage(onlinePlayer.GetClient(), alliance));
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[UCS] R-C4: falha ao reenviar 24301 do cla: " + ex.Message);
+            }
+        }
+
+        //R-C4b: recalcula o score do cla (soma dos trofeus dos membros), persiste e
+        //atualiza a tela dos membros online. Usado quando um membro entra/sai/e expulso.
+        public static void RefreshAllianceScore(long allianceId)
+        {
+            if (allianceId <= 0)
+                return;
+            Alliance alliance = GetAlliance(allianceId);
+            if (alliance == null)
+                return;
+            try
+            {
+                alliance.RecalculateScore();
+                lock (m_vDatabaseLock)
+                {
+                    m_vDatabase.Save(new List<Alliance> { alliance });
+                }
+                SendAllianceDataToMembers(alliance);
+                Console.WriteLine("[UCS] R-C4: score do cla " + allianceId +
+                    " recalculado para " + alliance.GetScore());
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[UCS] R-C4: falha ao recalcular score do cla: " + ex.Message);
+            }
+        }
+
+        //R-C4b: HP total atacavel de uma vila (muros nao contam para a % de destruicao
+        //no CoC 2015). Usado para converter os "damage points" do comando 603 em
+        //percentual aproximado de destruicao.
+        public static int GetAttachableHpTotal(Level level)
+        {
+            if (level == null)
+                return 0;
+            int total = 0;
+            try
+            {
+                foreach (var go in level.GameObjectManager.GetGameObjects(0))
+                {
+                    Building b = go as Building;
+                    if (b == null)
+                        continue;
+                    BuildingData bd = b.GetBuildingData();
+                    if (bd == null)
+                        continue;
+                    if (!string.IsNullOrEmpty(bd.TID) &&
+                        bd.TID.IndexOf("WALL", StringComparison.OrdinalIgnoreCase) >= 0)
+                        continue; //muros nao entram na % de destruicao
+                    if (bd.Hitpoints == null || bd.Hitpoints.Count == 0)
+                        continue;
+                    int lvl = b.GetUpgradeLevel();
+                    int hp = (lvl >= 0 && lvl < bd.Hitpoints.Count)
+                        ? bd.Hitpoints[lvl]
+                        : bd.Hitpoints[0];
+                    if (hp > 0)
+                        total += hp;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[UCS] R-C4: erro ao calcular HP atacavel: " + ex.Message);
+            }
+            return total;
         }
 
         public static void LoadFingerPrint()

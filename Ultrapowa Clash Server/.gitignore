@@ -1,0 +1,13 @@
+# Artefatos de build (gerados pelo build-server.sh / mcs)
+obj/
+bin/
+*.mdb
+*.user
+
+# Runtime do servidor
+bin/Release/ucsdb
+bin/Release/ucsdb.backup-*
+bin/Release/unknown-commands.log
+bin/Release/r-c4-603.log
+bin/Release/generated-*.bin
+bin/Release/generated-*.json
