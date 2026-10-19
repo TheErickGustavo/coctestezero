@@ -11,6 +11,8 @@ using UCS.Logic;
 using System.Configuration;
 using MySql.Data;
 using Newtonsoft.Json;
+using UCS.Logic;
+using UCS.PacketProcessing;
 
 namespace UCS.Core
 {
@@ -92,6 +94,8 @@ namespace UCS.Core
                         account.SetTime(p.LastUpdateTime);
                         account.GetPlayerAvatar().LoadFromJSON(p.Avatar);
                         account.LoadFromJSON(p.GameObjects);
+                        //X4b: reconstroi alliance_units/capacidades do avatar a partir do castelo
+                        AllianceTroopService.SyncAllianceUnits(account);
                     }
                 }
             }

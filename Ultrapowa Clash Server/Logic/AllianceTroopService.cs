@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UCS.Core;
 using UCS.GameFiles;
+using UCS.PacketProcessing;
 
 namespace UCS.Logic
 {
@@ -131,6 +132,38 @@ namespace UCS.Logic
             return storage.GetUsedCapacity() + "/" + storage.GetMaxCapacity();
         }
 
+        //X4b: copia as unidades do castelo (1000014) para a lista alliance_units do avatar.
+        //O cliente (7.65) le a bolha do castelo NA VISITA (0/35) desses dados binarios do avatar,
+        //nao do JSON da vila. Sem isso, a visita mostra sempre 0/cap.
+        public static void SyncAllianceUnits(Level player)
+        {
+            try
+            {
+                if (player == null) return;
+                ClientAvatar avatar = player.GetPlayerAvatar();
+                if (avatar == null) return;
+                Building castle;
+                UnitStorageComponent storage = GetCastleStorage(player, out castle);
+                if (storage == null || castle == null) return;
+
+                avatar.AllianceUnits.Clear();
+                for (int i = 0; i < storage.GetUnitSlotCount(); i++)
+                {
+                    CombatItemData cd = storage.GetUnitType(i);
+                    int count = storage.GetUnitCount(i);
+                    if (cd != null && count > 0)
+                        avatar.AllianceUnits.Add(new DataSlot(cd, count));
+                }
+                avatar.SetAllianceCastleLevel(castle.GetUpgradeLevel() + 1); //JSON lvl e 0-based
+                avatar.SetAllianceCastleTotalCapacity(storage.GetMaxCapacity());
+                avatar.SetAllianceCastleUsedCapacity(storage.GetUsedCapacity());
+            }
+            catch (Exception ex)
+            {
+                Debugger.WriteLine("[UCS] SyncAllianceUnits falhou: " + ex.Message);
+            }
+        }
+
         // Fluxo completo: valida o pedido, tira do acampamento do doador, entrega no castelo do
         // solicitante, atualiza contadores e o progresso do pedido. Retorna quantas unidades foram
         // entregues; se 0, 'error' diz o motivo.
@@ -196,6 +229,7 @@ namespace UCS.Logic
             int donatedSpace = delivered * housing;
             donor.SetDonatedTroops(donor.GetDonatedTroops() + donatedSpace);
             requester.SetReceivedTroops(requester.GetReceivedTroops() + donatedSpace);
+            SyncAllianceUnits(requesterLevel); //X4b: bolha da visita/cartao do castelo leem o avatar
             requester.SetAllianceCastleUsedCapacity(storage.GetUsedCapacity()); //X4b: sincroniza o avatar com o castelo (bubble da visita/limite)
             if (request != null)
             {

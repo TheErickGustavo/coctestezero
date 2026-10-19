@@ -98,6 +98,12 @@ namespace UCS.Logic
             return m_vMaxCapacity;
         }
 
+        //X4b: quantidade de tipos de unidade guardados (p/ sincronizar o avatar)
+        public int GetUnitSlotCount()
+        {
+            return m_vUnits.Count;
+        }
+
         public int GetUnitCount(int index)
         {
             return m_vUnits[index].Count;
