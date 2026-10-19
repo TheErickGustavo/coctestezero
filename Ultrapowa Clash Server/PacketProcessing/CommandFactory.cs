@@ -61,6 +61,7 @@ namespace UCS.PacketProcessing
             m_vCommands.Add(0x0225, typeof(UpgradeMultipleBuildingsCommand));
             m_vCommands.Add(0x0226, typeof(RemoveUnitsCommand));
             m_vCommands.Add(0x0258, typeof(PlaceAttackerCommand));
+            m_vCommands.Add(0x025B, typeof(EndOfBattleCommand));
             m_vCommands.Add(0x025C, typeof(CastSpellCommand));
             m_vCommands.Add(0x02BC, typeof(SearchOpponentCommand));
         }
