@@ -74,6 +74,19 @@ namespace UCS.PacketProcessing
             }
             else
             {
+                //R-C4: dump do payload dos comandos desconhecidos (ex.: 603 no fim da batalha).
+                try
+                {
+                    long pos = br.BaseStream.Position;
+                    long remaining = br.BaseStream.Length - pos;
+                    byte[] payload = remaining > 0 ? br.ReadBytes((int)remaining) : new byte[0];
+                    string hex = BitConverter.ToString(payload).Replace("-", "");
+                    File.AppendAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "unknown-commands.log"),
+                        DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + " cmd=" + cm + " len=" + payload.Length + " hex=" + hex + Environment.NewLine);
+                    Console.WriteLine("\t[UCS] Unknown command " + cm + " payload(" + payload.Length + "): " + hex);
+                }
+                catch { }
+
                 Console.Write("\t");
                 Console.ForegroundColor = ConsoleColor.Magenta;
                 Console.Write("Unhandled");

@@ -110,9 +110,19 @@ namespace UCS.Core
         public static void DropClient(long socketHandle)
         {
             Client c;
-            m_vClients.TryRemove(socketHandle, out c);
-            if(c.GetLevel() != null)
-                LogPlayerOut(c.GetLevel());
+            if (m_vClients.TryRemove(socketHandle, out c))
+            {
+                if (c.GetLevel() != null)
+                {
+                    try
+                    {
+                        m_vDatabase.Save(new List<Level> { c.GetLevel() });
+                        m_vDatabase.Save(ObjectManager.GetInMemoryAlliances());
+                    }
+                    catch { }
+                    LogPlayerOut(c.GetLevel());
+                }
+            }
         }
 
         public static void LoadLevel(Level level)

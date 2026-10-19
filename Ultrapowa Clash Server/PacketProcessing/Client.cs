@@ -312,6 +312,16 @@ namespace UCS.PacketProcessing
                         //Update Decryption Key
                         byte[] data = DataStream.Skip(7).Take(length).ToArray();
                         Decrypt(data);
+                        var hex = new StringBuilder();
+                        var asc = new StringBuilder();
+                        foreach (byte b in data)
+                        {
+                            hex.Append(b.ToString("X2")).Append(' ');
+                            asc.Append(b >= 32 && b < 127 ? (char)b : '.');
+                        }
+                        Console.Write("[U] " + type.ToString() + " (" + data.Length + "b) ");
+                        Console.WriteLine(hex.ToString().TrimEnd());
+                        Console.WriteLine("    |" + asc.ToString() + "|");
                     }
                     DataStream.RemoveRange(0, 7 + length);
                 }

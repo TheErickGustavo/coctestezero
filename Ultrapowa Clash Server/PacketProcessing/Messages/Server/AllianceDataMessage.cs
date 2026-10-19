@@ -58,8 +58,9 @@ namespace UCS.PacketProcessing
             pack.AddInt32(m_vAlliance.GetAllianceBadgeData());
             pack.AddInt32(m_vAlliance.GetAllianceType());            //real: 1
             pack.AddInt32(allianceMembers.Count);
-            for (int i = 0; i < 9; i++) pack.AddInt32(0);            //real: 9 zeros
-            pack.AddInt32(1);                                        //real: 1
+            pack.AddInt32(m_vAlliance.GetScore());                   //0: score do cla (real: 0 quando level 1)
+            for (int i = 0; i < 8; i++) pack.AddInt32(0);            //1..8: required/wars/origem/exp
+            pack.AddInt32(m_vAlliance.GetAllianceLevel());           //9: nivel do cla (real: 1)
             pack.AddString(m_vAlliance.GetAllianceDescription());    //len + descricao (real: texto livre)
             pack.AddInt32(0);                                        //real: 0
             //intro da lista de membros (real: u8 1 + i64 allId + i32 count)
@@ -69,7 +70,7 @@ namespace UCS.PacketProcessing
             int memberOrder = 0;
             foreach (var allianceMember in allianceMembers)
             {
-                //entrada real de membro: i64 id, nome, 10x i32 (role, level, league, score, doadas, recebidas, 0, ordem 1-based, 0, 0), u8 1, u8 1, i64 id
+                //entrada real de membro: i64 id, nome, 10x i32 (role, level, league, score, doadas, recebidas, 0, ordem 0-based, 0, 0), u8 1, u8 1, i64 id
                 pack.AddInt64(allianceMember.GetAvatarId());
                 Level memberLevel = ResourcesManager.GetPlayer(allianceMember.GetAvatarId(), true);
                 string memberName = "?";
@@ -92,7 +93,7 @@ namespace UCS.PacketProcessing
                 pack.AddInt32(memberDonated);   //A (real: tropas doadas)
                 pack.AddInt32(memberReceived);  //B (real: tropas recebidas)
                 pack.AddInt32(0);
-                pack.AddInt32(memberOrder + 1); //D (real: ordem 1-based)
+                pack.AddInt32(memberOrder);     //D (real: ordem 0-based; lider = 0)
                 pack.AddInt32(0);
                 pack.AddInt32(0);
                 pack.Add(1);

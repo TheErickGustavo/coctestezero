@@ -25,12 +25,13 @@ namespace UCS.PacketProcessing
             m_vMessages.Add(14102, typeof(ExecuteCommandsMessage));
             m_vMessages.Add(14113, typeof(VisitHomeMessage));
             m_vMessages.Add(14134, typeof(AttackNpcMessage));
+            m_vMessages.Add(14262, typeof(BindGoogleServiceAccountMessage));
             //m_vMessages.Add(14136, );//Edit Clan Messages
             m_vMessages.Add(14301, typeof(CreateAllianceMessage));
             m_vMessages.Add(14302, typeof(AskForAllianceDataMessage));
             m_vMessages.Add(14303, typeof(AskForJoinableAlliancesListMessage));
             m_vMessages.Add(14305, typeof(JoinAllianceMessage));
-            //m_vMessages.Add(14306, );//Promote
+            m_vMessages.Add(14306, typeof(PromoteAllianceMemberMessage));
             m_vMessages.Add(14308, typeof(LeaveAllianceMessage));
             m_vMessages.Add(14315, typeof(ChatToAllianceStreamMessage));
             m_vMessages.Add(14324, typeof(SearchAlliancesMessage));

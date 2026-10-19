@@ -10,6 +10,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UCS.PacketProcessing;
 using UCS.Helpers;
+using UCS.Core;
 
 namespace UCS.Logic
 {
@@ -51,9 +52,9 @@ namespace UCS.Logic
             m_vRequiredScore = 0;
             m_vWarFrequency = 0;
             m_vAllianceOrigin = 0x01E84857;
-            m_vScore = 10000;
-            m_vAllianceExperience = 8599;
-            m_vAllianceLevel = 10;
+            m_vScore = 0;
+            m_vAllianceExperience = 0;
+            m_vAllianceLevel = 1;
             m_vWonWars = 0;
             m_vLostWars = 0;
             m_vDrawWars = 0;
@@ -234,6 +235,23 @@ namespace UCS.Logic
             return m_vScore;
         }
 
+        //R-C3: score do cla = soma dos trofeus dos membros.
+        public void RecalculateScore()
+        {
+            int total = 0;
+            foreach (var member in m_vAllianceMembers.Values)
+            {
+                try
+                {
+                    Level level = ResourcesManager.GetPlayer(member.GetAvatarId(), true);
+                    if (level != null && level.GetPlayerAvatar() != null)
+                        total += level.GetPlayerAvatar().GetScore();
+                }
+                catch { }
+            }
+            m_vScore = total;
+        }
+
         public int GetWarScore()
         {
             return m_vWonWars;
@@ -341,6 +359,16 @@ namespace UCS.Logic
                 AllianceMemberEntry member = new AllianceMemberEntry(id);
                 member.Load(jsonMember);
                 m_vAllianceMembers.Add(id, member);
+            }
+
+            //R-C3: cla antigo (criado antes do fix de defaults) ainda tem 10000/10/8599.
+            //Migra para o estado real: sem guerra = nivel 1/exp 0, score = soma dos trofeus dos membros.
+            if (m_vScore == 10000 && m_vAllianceLevel == 10 && m_vAllianceExperience == 8599 &&
+                m_vWonWars == 0 && m_vLostWars == 0 && m_vDrawWars == 0)
+            {
+                m_vAllianceExperience = 0;
+                m_vAllianceLevel = 1;
+                RecalculateScore();
             }
 
             if (jsonObject["chat"] != null)

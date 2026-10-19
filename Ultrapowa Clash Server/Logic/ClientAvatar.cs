@@ -60,6 +60,7 @@ namespace UCS.Logic
             this.EndShieldTime = (int)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds + Convert.ToInt32(ConfigurationManager.AppSettings["startingShieldTime"]));
             m_vCurrentGems = Convert.ToInt32(ConfigurationManager.AppSettings["startingGems"]);
             m_vScore = Convert.ToInt32(ConfigurationManager.AppSettings["startingTrophies"]);
+            UpdateLeague();
             //7.65: conta nova = tutorial do zero (captura real: tutSteps=0). 0x0A/0x0D fazia o cliente pular para o passo da batalha e crashar (StackOverflow GLThread)
             this.TutorialStepsCount = 0x00;
             //7.65: nome vazio ou com 9+ chars crasha o cliente (buffer de nome do cliente)
@@ -124,7 +125,7 @@ namespace UCS.Logic
             data.AddInt32(m_vScore);     //F7 = trofeus (real: score; conferido com capturas: 859/4456 = linha de membro)
             data.AddInt32(2);
             data.AddInt32(2);
-            data.AddInt32(3);
+            data.AddInt32(GetTownHallLevel() + 1); //TH level (1-based) para popup de troca de vila / placeholder
             data.AddInt32(4);
             //CONST37 real: 12x00, 01, 8x00, 02, 15x00
             for (int i = 0; i < 37; i++)
@@ -410,6 +411,7 @@ namespace UCS.Logic
             m_vExperience = jsonObject["experience"].ToObject<int>();
             m_vCurrentGems = jsonObject["current_gems"].ToObject<int>();
             m_vScore = jsonObject["score"].ToObject<int>();
+            UpdateLeague();
             if (jsonObject["donated_troops"] != null)
                 m_vDonatedTroops = jsonObject["donated_troops"].ToObject<int>();
             if (jsonObject["received_troops"] != null)
@@ -561,6 +563,36 @@ namespace UCS.Logic
         public void SetReceivedTroops(int count)
         {
             m_vReceivedTroops = count;
+        }
+
+        public void SetScore(int count)
+        {
+            m_vScore = count;
+            UpdateLeague();
+        }
+
+        public void UpdateLeague()
+        {
+            int s = m_vScore;
+            int id;
+            if (s < 400) id = 0;
+            else if (s < 500) id = 1;
+            else if (s < 600) id = 2;
+            else if (s < 800) id = 3;
+            else if (s < 1000) id = 4;
+            else if (s < 1200) id = 5;
+            else if (s < 1400) id = 6;
+            else if (s < 1600) id = 7;
+            else if (s < 1800) id = 8;
+            else if (s < 2000) id = 9;
+            else if (s < 2200) id = 10;
+            else if (s < 2400) id = 11;
+            else if (s < 2600) id = 12;
+            else if (s < 2800) id = 13;
+            else if (s < 3000) id = 14;
+            else if (s < 3200) id = 15;
+            else id = 16;
+            m_vLeagueId = id;
         }
 
         public void SetName(string name)
