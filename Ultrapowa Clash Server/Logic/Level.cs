@@ -19,6 +19,77 @@ namespace UCS.Logic
         public GameObjectManager GameObjectManager;//a1 + 44
         public WorkerManager WorkerManager;
         public int LastNpcAttackLevelId { get; set; }
+
+        // R-C4: contexto transitório do ataque PvP. Não é persistido no JSON da vila.
+        private readonly object m_vBattleContextLock = new object();
+        private bool m_vHasPendingPvpBattle;
+        private bool m_vBattleResultProcessed;
+        private bool m_vHasEndOfBattleResult;
+        private long m_vBattleDefenderId;
+        private int m_vBattleDefenderScore;
+        private long m_vBattleDefenderAllianceId;
+        private int m_vEndOfBattleValue;
+
+        public bool HasPendingPvpBattle { get { lock (m_vBattleContextLock) return m_vHasPendingPvpBattle; } }
+        public bool HasEndOfBattleResult { get { lock (m_vBattleContextLock) return m_vHasEndOfBattleResult; } }
+        public int EndOfBattleValue { get { lock (m_vBattleContextLock) return m_vEndOfBattleValue; } }
+        public long BattleDefenderId { get { lock (m_vBattleContextLock) return m_vBattleDefenderId; } }
+        public int BattleDefenderScore { get { lock (m_vBattleContextLock) return m_vBattleDefenderScore; } }
+        public long BattleDefenderAllianceId { get { lock (m_vBattleContextLock) return m_vBattleDefenderAllianceId; } }
+
+        public void BeginPvpBattle(Level defender)
+        {
+            if (defender == null || defender.GetPlayerAvatar() == null)
+                return;
+
+            lock (m_vBattleContextLock)
+            {
+                m_vHasPendingPvpBattle = true;
+                m_vBattleResultProcessed = false;
+                m_vHasEndOfBattleResult = false;
+                m_vBattleDefenderId = defender.GetPlayerAvatar().GetId();
+                m_vBattleDefenderScore = defender.GetPlayerAvatar().GetScore();
+                m_vBattleDefenderAllianceId = defender.GetPlayerAvatar().GetAllianceId();
+                m_vEndOfBattleValue = 0;
+            }
+        }
+
+        public void RecordEndOfBattle(int value)
+        {
+            lock (m_vBattleContextLock)
+            {
+                if (m_vHasPendingPvpBattle && !m_vBattleResultProcessed)
+                {
+                    m_vEndOfBattleValue = value;
+                    m_vHasEndOfBattleResult = true;
+                }
+            }
+        }
+
+        public bool TryMarkBattleResultProcessed()
+        {
+            lock (m_vBattleContextLock)
+            {
+                if (!m_vHasPendingPvpBattle || m_vBattleResultProcessed)
+                    return false;
+                m_vBattleResultProcessed = true;
+                return true;
+            }
+        }
+
+        public void ClearPvpBattleContext()
+        {
+            lock (m_vBattleContextLock)
+            {
+                m_vHasPendingPvpBattle = false;
+                m_vBattleResultProcessed = false;
+                m_vHasEndOfBattleResult = false;
+                m_vBattleDefenderId = 0;
+                m_vBattleDefenderScore = 0;
+                m_vBattleDefenderAllianceId = 0;
+                m_vEndOfBattleValue = 0;
+            }
+        }
         private Client m_vClient;
         private ClientAvatar m_vClientAvatar;
         private DateTime m_vTime;//a1 + 40
