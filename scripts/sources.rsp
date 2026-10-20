@@ -205,3 +205,4 @@ Logic/BattleSimulation.cs
 PacketProcessing/GameOpCommands/NewPlayerGameOpCommand.cs
 PacketProcessing/GameOpCommands/AccountGameOpCommand.cs
 PacketProcessing/GameOpCommands/CastleTroopsGameOpCommand.cs
+Logic/DataSlotUtil.cs

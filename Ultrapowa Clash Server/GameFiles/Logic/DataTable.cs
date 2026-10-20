@@ -121,6 +121,21 @@ namespace UCS.GameFiles
             return m_vData.Count;
         }
 
+        //R-T7: indice real do item (a linha do CSV). O GetGlobalID() usa um "count"
+        //parcial e devolve ids DESLOCADOS (ex.: o Dragon vira 4000006 em vez de
+        //4000049) - o cliente 7.65 nao reconhece a tropa com o id errado.
+        public int GetItemIndex(Data data)
+        {
+            if (data == null)
+                return -1;
+            for (int i = 0; i < m_vData.Count; i++)
+            {
+                if (ReferenceEquals(m_vData[i], data) || m_vData[i] == data)
+                    return i;
+            }
+            return -1;
+        }
+
         public Data GetDataByName(string name)
         {
             return m_vData.Find(d => d.GetName() == name);
