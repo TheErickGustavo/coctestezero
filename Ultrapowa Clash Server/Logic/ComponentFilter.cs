@@ -35,16 +35,6 @@ namespace UCS.Logic
             {
                 result = base.TestGameObject(go);
             }
-            //R-C5: diagnostico
-            if (!result)
-            {
-                Building gb = go as Building;
-                Console.WriteLine("[UCS] R-C5 filtro2: predio " +
-                    (gb != null && gb.GetBuildingData() != null ? gb.GetBuildingData().GetGlobalID() + " " + gb.GetBuildingData().TID : "?") +
-                    " typeDoFiltro=" + Type + " componentDoPredio=" + (c != null ? c.GetType().Name : "NULL") +
-                    " ignorados=" + (m_vIgnoredObjects != null ? m_vIgnoredObjects.Count.ToString() : "null") +
-                    " goGlobalId=" + go.GlobalId);
-            }
             return result;
         }
 

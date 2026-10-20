@@ -58,17 +58,6 @@ namespace UCS.Logic
                             result = c;
                         }
                     }
-                    else
-                    {
-                        //R-C5: diagnostico - o filtro do storage rejeitou o predio
-                        GameObject go = c.GetParent();
-                        Building gb = go as Building;
-                        Component gc = go.GetComponent(0, false);
-                        Console.WriteLine("[UCS] R-C5 filtro: predio " +
-                            (gb != null && gb.GetBuildingData() != null ? gb.GetBuildingData().GetGlobalID() + " " + gb.GetBuildingData().TID : "?") +
-                            " componentType=" + (gc != null ? gc.Type.ToString() : "null") +
-                            " enabled=" + (gc != null && gc.IsEnabled() ? "sim" : "NAO"));
-                    }
                 }
             }
             return result;
