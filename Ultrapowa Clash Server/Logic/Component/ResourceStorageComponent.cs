@@ -307,6 +307,12 @@ namespace UCS.Logic
                 jsonObject["res_time"] = resTimeRemaining;
             }
 
+            //R-C4: o res_prod so existe nos COLETORES (o jogo 7.65 nao usa o campo em
+            // nenhum outro predio). No castelo do cla, no TH e nos altares ele fazia o
+            //cliente 7.65 trata-los como coletor.
+            if (m_vProducedIndex < 0)
+                return jsonObject;
+
             JObject resProd = new JObject();
             //R-C6: "avail" e o ACUMULADO real do coletor e "t" o tempo que falta para
             //encher. Antes gravava avail = GetCollectable() (que devolvia a CAPACIDADE
