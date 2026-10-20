@@ -93,6 +93,20 @@ namespace UCS.Logic
             return result;
         }
 
+        //R-T7: o id que o CLIENTE entende de uma tropa e o do TIPO (nivel 1). O
+        //GetGlobalID() do servidor usa um "count" parcial e devolve ids deslocados
+        //(ex.: 4000008 em vez de 4000049 para o Dragon) - o cliente nao reconhecia.
+        public static CharacterData GetBaseType(CombatItemData cd)
+        {
+            if (cd == null)
+                return null;
+            try
+            {
+                return ObjectManager.DataTables.GetCharacterByName(cd.GetName());
+            }
+            catch { return null; }
+        }
+
         public int GetMaxCapacity()
         {
             return m_vMaxCapacity;
@@ -257,7 +271,21 @@ namespace UCS.Logic
                 foreach (var unit in m_vUnits)
                 {
                     JArray unitSlotJsonArray = new JArray();
-                    unitSlotJsonArray.Add(unit.UnitData.GetGlobalID());
+                    //R-T7: grava o id do TIPO da tropa (ex.: 4000049 = Dragon), como o
+                    //jogo real faz. O GetGlobalID() do servidor usa um "count" parcial
+                    //e devolvia ids deslocados (ex.: 4000008 = Archer nivel 2) - o
+                    //cliente 7.65 nao reconhecia a tropa e o castelo do cla (que usa
+                    //alliance_units) nunca aparecia na tela de ataque.
+                    int unitId = unit.UnitData.GetGlobalID();
+                    CharacterData baseCd = null;
+                    try
+                    {
+                        baseCd = ObjectManager.DataTables.GetCharacterByName(unit.UnitData.GetName());
+                    }
+                    catch { }
+                    if (baseCd != null)
+                        unitId = baseCd.GetGlobalID();
+                    unitSlotJsonArray.Add(unitId);
                     unitSlotJsonArray.Add(unit.Count);
                     unitJsonArray.Add(unitSlotJsonArray);
                 }
@@ -320,7 +348,11 @@ namespace UCS.Logic
                         int count = storage.GetUnitCount(s);
                         if (count <= 0)
                             continue;
-                        int id = cd.GetGlobalID();
+                        //R-T7: id do TIPO da tropa (nivel 1) - o cliente 7.65 so
+                        //reconhece esse id (o GetGlobalID() do servidor devolve ids
+                        //deslocados por causa do "count" parcial do DataTable).
+                        CharacterData baseType = GetBaseType(cd);
+                        int id = baseType != null ? baseType.GetGlobalID() : cd.GetGlobalID();
                         if (totals.ContainsKey(id))
                             totals[id] += count;
                         else

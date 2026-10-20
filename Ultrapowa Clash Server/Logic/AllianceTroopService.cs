@@ -175,7 +175,12 @@ namespace UCS.Logic
                     CombatItemData cd = storage.GetUnitType(i);
                     int count = storage.GetUnitCount(i);
                     if (cd != null && count > 0)
-                        avatar.AllianceUnits.Add(new DataSlot(cd, count));
+                    {
+                        //R-T7: id do TIPO da tropa (o cliente 7.65 so reconhece o id do
+                        //nivel 1 - o GetGlobalID() do servidor devolve ids deslocados).
+                        CharacterData baseType = UnitStorageComponent.GetBaseType(cd);
+                        avatar.AllianceUnits.Add(new DataSlot(baseType != null ? (CombatItemData)baseType : cd, count));
+                    }
                 }
                 avatar.SetAllianceCastleLevel(castle.GetUpgradeLevel() + 1); //JSON lvl e 0-based
                 avatar.SetAllianceCastleTotalCapacity(storage.GetMaxCapacity());
