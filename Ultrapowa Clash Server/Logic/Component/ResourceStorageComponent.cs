@@ -122,30 +122,46 @@ namespace UCS.Logic
             m_vTimer.StartTimer(seconds, GetParent().GetLevel().GetTime());
         }
 
-        //R-C6: o coletor acumula CONTINUAMENTE (como no CoC): o disponivel e
-        //producao/hora * tempo decorrido, ate a capacidade. Quando o timer zera,
-        //o coletor esta cheio.
+        //R-C6/P-1: o coletor acumula CONTINUAMENTE (como no CoC) e o acumulado e
+        //PERSISTIDO no JSON da vila ("avail"). A base vem do JSON (o que ja tinha
+        //quando a vila foi carregada) + o que foi produzido desde entao.
+        //Antes o GetCollectable() ignorava o "avail" salvo -> um coletor cheio
+        //perdia o recurso ao recarregar a vila.
         public int GetCollectable()
         {
             if (m_vProducedIndex < 0 || m_vProducedIndex >= m_vCurrentResources.Count)
                 return 0;
+            int baseAmount = m_vCurrentResources[m_vProducedIndex];
             if (m_vTimer == null)
-                return m_vProducedCapacity;
+                return m_vProducedCapacity;      //coletor cheio
             try
             {
                 int remaining = m_vTimer.GetRemainingSeconds(GetParent().GetLevel().GetTime());
                 int elapsed = m_vTotalSeconds - remaining;
                 if (elapsed <= 0)
-                    return 0;
-                long amount = (long)m_vPerHour * elapsed / 3600;
+                    return baseAmount;
+                long amount = baseAmount + (long)m_vPerHour * elapsed / 3600;
                 if (amount > m_vProducedCapacity)
                     amount = m_vProducedCapacity;
                 return (int)amount;
             }
             catch
             {
-                return 0;
+                return baseAmount;
             }
+        }
+
+        //R-C6/P-1: diagnostico - devolve o estado bruto do coletor.
+        public string Describe()
+        {
+            string t = (m_vTimer != null)
+                ? m_vTimer.GetRemainingSeconds(GetParent().GetLevel().GetTime()).ToString()
+                : "cheio";
+            return "idx=" + m_vProducedIndex + " cap=" + m_vProducedCapacity +
+                " perHour=" + m_vPerHour + " tRestante=" + t +
+                " acumuladoJson=" + (m_vProducedIndex >= 0 && m_vProducedIndex < m_vCurrentResources.Count
+                    ? m_vCurrentResources[m_vProducedIndex].ToString() : "?") +
+                " coletavel=" + GetCollectable();
         }
 
         public int GetProducedIndex()
@@ -232,9 +248,19 @@ namespace UCS.Logic
         public override JObject Save(JObject jsonObject)
         {
             JObject resProd = new JObject();
-            resProd.Add("t", m_vTimer != null
-                ? m_vTimer.GetRemainingSeconds(GetParent().GetLevel().GetTime()) : 0);
-            resProd.Add("avail", GetCollectable());
+            int avail = GetCollectable();
+            //P-1: "t" e "avail" tem que ser COERENTES entre si, senao o proximo load
+            //reintroduz divergencia (o servidor acumulava mais que o cliente e o
+            //estado do coletor inflava a cada coleta). t = (cap - avail) / taxa.
+            int remaining = 0;
+            if (m_vProducedIndex >= 0 && m_vPerHour > 0)
+            {
+                remaining = (int)((long)(m_vProducedCapacity - avail) * 3600 / m_vPerHour);
+                if (remaining < 0)
+                    remaining = 0;
+            }
+            resProd.Add("t", remaining);
+            resProd.Add("avail", avail);
             jsonObject.Add("res_prod", resProd);
             return jsonObject;
         }

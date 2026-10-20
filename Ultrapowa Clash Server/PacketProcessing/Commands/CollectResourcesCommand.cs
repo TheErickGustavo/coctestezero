@@ -51,10 +51,14 @@ namespace UCS.PacketProcessing
                 if (idx < 0)
                     return;
                 int available = storage.GetCollectable();
+                //P-1: diagnostico completo do coletor (lvl, capacidade, taxa/hora, timer,
+                //acumulado, tick do servidor e o Unknown1 que o cliente mandou).
                 Debugger.WriteLine("[UCS] Coleta: predio " + BuildingId + " (data " +
                     b.GetBuildingData().GetGlobalID() + " " + b.GetBuildingData().TID +
-                    " lvl" + b.GetUpgradeLevel() + ") disponivel=" + available +
-                    " cap=" + storage.GetProducedCapacity() + " unknown1=" + Unknown1);
+                    " lvl" + b.GetUpgradeLevel() + ") | " + storage.Describe() +
+                    " | unknown1=" + Unknown1 +
+                    " | tickServidor=" + (int)level.GetTime().Subtract(new DateTime(1970, 1, 1)).TotalSeconds +
+                    " | clockServidor=" + DateTime.Now.ToString("HH:mm:ss"));
                 if (available <= 0)
                 {
                     Debugger.WriteLine("[UCS] Coleta: nada disponivel no predio " + BuildingId);
