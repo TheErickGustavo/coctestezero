@@ -47,6 +47,22 @@ namespace UCS.PacketProcessing
                     ChatBroadcast.SendPrivate(client, avatar, HelpText());
                     return true;
                 default:
+                    //R-T7: os comandos de admin (/give, /account, /visit, ...) ficam no
+                    //GameOpCommandFactory (usados pelo chat GLOBAL). No chat do CLA
+                    //eles nao existiam -> "Comando desconhecido". Agora o chat do cla
+                    //delega para a mesma fabrica.
+                    {
+                        object op = GameOpCommandFactory.Parse(text);
+                        if (op != null)
+                        {
+                            Command opCmd = op as Command;
+                            if (opCmd != null)
+                            {
+                                opCmd.Execute(level);
+                                return true;
+                            }
+                        }
+                    }
                     ChatBroadcast.SendPrivate(client, avatar, "Comando desconhecido: /" + parts[0] + ". Use /ajuda");
                     return true;
             }
