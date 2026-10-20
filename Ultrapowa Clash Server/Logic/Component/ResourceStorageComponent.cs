@@ -194,22 +194,6 @@ namespace UCS.Logic
                 m_vCurrentResources[resourceIndex] = count;
         }
 
-        //R-C6: reinicia o estado do coletor (usado pelo /fixaccounts): o acumulado vai
-        //a zero e o timer volta ao tempo completo de enchimento. O cliente 7.65 ignora o
-        //"avail" e recalcula pelo relogio da sessao da vila, entao um "avail" herdado
-        //grande (150.000, vindo do home.json do jogo) so servia pra confundir.
-        public bool ResetCollectorState()
-        {
-            if (m_vProducedIndex < 0 || m_vProducedCapacity <= 0)
-                return false;
-            if (m_vCurrentResources[m_vProducedIndex] == 0 && m_vTimer != null &&
-                m_vTimer.GetRemainingSeconds(GetParent().GetLevel().GetTime()) > 0)
-                return false;
-            m_vCurrentResources[m_vProducedIndex] = 0;
-            StartProductionTimer();
-            return true;
-        }
-
         public int GetCount(int resourceIndex)
         {
             return m_vCurrentResources[resourceIndex];
@@ -272,11 +256,6 @@ namespace UCS.Logic
 
         public override JObject Save(JObject jsonObject)
         {
-            //R-C5: o cliente 7.65 so espera "res_prod" nos COLETORES. O res_prod em
-            //outros predios (ex.: Town Hall, que tem MaxStoredGold=1000) fazia o
-            //cliente 7.65 crashar com SIGSEGV ao abrir a vila.
-            if (m_vProducedIndex < 0)
-                return jsonObject;
             JObject resProd = new JObject();
             //R-C6: "avail" e o ACUMULADO real do coletor e "t" o tempo que falta para
             //encher. Antes gravava avail = GetCollectable() (que devolvia a CAPACIDADE

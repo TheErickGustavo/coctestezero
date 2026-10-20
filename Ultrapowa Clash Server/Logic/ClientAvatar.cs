@@ -45,61 +45,6 @@ namespace UCS.Logic
             this.NpcLootedGold = new List<DataSlot>();
             this.NpcLootedElixir = new List<DataSlot>();
             m_vLeagueId = 9;
-            InitDefaultSlots();
-        }
-
-        //R-C5: a conta nova precisa das MESMAS listas que a conta que funciona tem
-        // (unit_upgrade_levels, spell_upgrade_levels, hero_upgrade_levels, hero_health,
-        //  hero_state, spells, units). Com as listas VAZIAS o cliente 7.65 crasha com
-        //  SIGSEGV (fault addr 0x4) ao processar o 24101 da vila inicial.
-        private void InitDefaultSlots()
-        {
-            try
-            {
-                //um slot por TIPO de tropa (o id do nivel 1 de cada grupo)
-                var charTable = ObjectManager.DataTables.GetTable(3);
-                string lastTid = null;
-                for (int i = 0; i < charTable.GetItemCount(); i++)
-                {
-                    CharacterData cd = charTable.GetItemAt(i) as CharacterData;
-                    if (cd == null || String.IsNullOrEmpty(cd.TID))
-                        continue;
-                    if (cd.TID == lastTid)
-                        continue;
-                    lastTid = cd.TID;
-                    m_vUnitUpgradeLevel.Add(new DataSlot(cd, 0));
-                    m_vUnitCount.Add(new DataSlot(cd, 0));
-                }
-
-                //feiticos
-                var spellTable = ObjectManager.DataTables.GetTable(25);
-                for (int i = 0; i < spellTable.GetItemCount(); i++)
-                {
-                    SpellData sd = spellTable.GetItemAt(i) as SpellData;
-                    if (sd == null)
-                        continue;
-                    m_vSpellUpgradeLevel.Add(new DataSlot(sd, 0));
-                    m_vSpellCount.Add(new DataSlot(sd, 0));
-                }
-
-                //herois (Rei e Rainha)
-                for (int i = 0; i < 2; i++)
-                {
-                    HeroData hd = ObjectManager.DataTables.GetDataById(28000000 + i) as HeroData;
-                    if (hd == null)
-                        continue;
-                    int hp = 0;
-                    if (hd.Hitpoints != null && hd.Hitpoints.Count > 0)
-                        hp = hd.Hitpoints[0];
-                    m_vHeroUpgradeLevel.Add(new DataSlot(hd, 0));
-                    m_vHeroHealth.Add(new DataSlot(hd, hp));
-                    m_vHeroState.Add(new DataSlot(hd, 0));
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("[UCS] R-C5: erro ao inicializar slots do avatar: " + ex.Message);
-            }
         }
 
         public ClientAvatar(long id) : this()

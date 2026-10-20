@@ -161,25 +161,13 @@ namespace UCS.PacketProcessing
                 Debugger.WriteLine("Connection failed. UCS config key clientVersion is not properly set.");
             }
 
-            level = ResourcesManager.GetPlayer(m_vAccountId);
-            if (level == null)
+            //R-C5: accountId <= 0 (app com dados locais limpos) cai na conta padrao.
+            if (m_vAccountId <= 0)
             {
-                //R-C5: conta nova -> cria a vila padrao (gamefiles/default/home.json),
-                //igual o CoC real. Antes o login estourava (level null).
-                try
-                {
-                    level = ObjectManager.CreateAvatar(m_vAccountId);
-                    Console.WriteLine("[UCS] R-C5: conta nova criada id=" + m_vAccountId);
-                }
-                catch (Exception createEx)
-                {
-                    Console.WriteLine("[UCS] R-C5: falha ao criar conta " + m_vAccountId + ": " + createEx.Message);
-                    var pf = new LoginFailedMessage(this.Client);
-                    pf.SetErrorCode(10);
-                    PacketManager.ProcessOutgoingPacket(pf);
-                    return;
-                }
+                m_vAccountId = ObjectManager.DefaultAccountId;
+                Console.WriteLine("[UCS] R-C5: login com accountId<=0 -> conta " + m_vAccountId);
             }
+            level = ResourcesManager.GetPlayer(m_vAccountId);
             if(level != null)
             {
                 if(level.GetAccountStatus() == 99)
@@ -244,8 +232,6 @@ namespace UCS.PacketProcessing
                 level.GetPlayerAvatar().SetAllianceId(0);
             //R-C5: sincroniza o contador de tropas do avatar com o storage dos quartéis.
             UnitStorageComponent.SyncAvatarUnitCounts(level);
-            //R-C5: ativa o Rei/Rainha (sem health > 0 o herói não aparece no ataque).
-            level.GetPlayerAvatar().ActivateHeroes(level);
             DumpBuildingData(level);
             PacketManager.ProcessOutgoingPacket(new OwnHomeDataMessage(this.Client, level));
             //X3: historico do mural - o servidor real NAO manda 24311 (conn27), mas sem ele o mural some ao relogar.

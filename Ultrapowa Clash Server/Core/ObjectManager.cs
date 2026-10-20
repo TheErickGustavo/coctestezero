@@ -104,6 +104,11 @@ namespace UCS.Core
             return alliance;
         }
 
+        //R-C5: o app manda accountId=0 depois de limpar os dados locais. Sem um
+        //mapeamento, ele criava uma conta nova a cada login. DefaultAccountId define
+        //para qual conta o login com id <= 0 cai (trocavel com /account <id>).
+        public static long DefaultAccountId = 1;
+
         public static Level CreateAvatar(long seed)
         {
             Level pl;
@@ -111,13 +116,8 @@ namespace UCS.Core
             {
                 if (seed == 0)
                     seed = m_vAvatarSeed;
-                //R-C5: o app manda accountId=0 quando os dados locais foram limpos; usar
-                //esse id criava varias contas com o MESMO id (0). Com seed <= 0 usa o
-                //proximo id livre.
-                long id = seed > 0 ? seed : m_vAvatarSeed;
-                pl = new Level(id);
-                if (id >= m_vAvatarSeed)
-                    m_vAvatarSeed = id + 1;
+                pl = new Level(seed);
+                m_vAvatarSeed++;
             }
             pl.LoadFromJSON(m_vHomeDefault);
             m_vDatabase.CreateAccount(pl);
@@ -356,24 +356,6 @@ namespace UCS.Core
             catch (Exception ex)
             {
                 Console.WriteLine("[UCS] R-C6: falha ao salvar player: " + ex.Message);
-            }
-        }
-
-        //R-C6: salva players + clans imediatamente (usado pelo /fixaccounts e por acoes
-        //que mudam recursos, para nada se perder ao fechar o jogo).
-        public static void SaveAllNow()
-        {
-            try
-            {
-                lock (m_vDatabaseLock)
-                {
-                    m_vDatabase.Save(ResourcesManager.GetInMemoryLevels());
-                    m_vDatabase.Save(m_vAlliances.Values.ToList());
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("[UCS] R-C6: falha ao salvar tudo: " + ex.Message);
             }
         }
 
