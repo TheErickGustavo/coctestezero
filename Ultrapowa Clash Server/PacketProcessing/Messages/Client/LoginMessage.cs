@@ -161,11 +161,15 @@ namespace UCS.PacketProcessing
                 Debugger.WriteLine("Connection failed. UCS config key clientVersion is not properly set.");
             }
 
-            //R-C5: accountId <= 0 (app com dados locais limpos) cai na conta padrao.
-            if (m_vAccountId <= 0)
+            //R-C5: o app guarda localmente o accountId que o servidor devolveu
+            //(LoginOk). Depois de limpar os dados ele ficou preso na conta nova (id 25),
+            //cuja vila inicial crasha o cliente (crash do tutorial, ja documentado).
+            //Com DefaultAccountId > 0 o login SEMPRE cai na conta principal.
+            if (ObjectManager.DefaultAccountId > 0)
             {
+                if (m_vAccountId != ObjectManager.DefaultAccountId)
+                    Console.WriteLine("[UCS] R-C5: login " + m_vAccountId + " -> conta padrao " + ObjectManager.DefaultAccountId);
                 m_vAccountId = ObjectManager.DefaultAccountId;
-                Console.WriteLine("[UCS] R-C5: login com accountId<=0 -> conta " + m_vAccountId);
             }
             level = ResourcesManager.GetPlayer(m_vAccountId);
             if(level != null)
