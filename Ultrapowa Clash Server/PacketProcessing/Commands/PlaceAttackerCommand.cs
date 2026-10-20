@@ -38,6 +38,7 @@ namespace UCS.PacketProcessing
             //P-7: o Unknown1 e o TICK do relogio do JOGO (1/60s) no momento da colocacao:
             //com ele + o 603 (tick final) o servidor estima o dano, a % de destruicao e o loot.
             Console.WriteLine("[UCS] R-C5 place: unit=" + (Unit != null ? Unit.GetName() : "?") +
+                " id=" + (Unit != null ? Unit.GetGlobalID() : 0) +
                 " unknown1(tick)=" + Unknown1 + " x=" + X + " y=" + Y);
             //R-C4: registra a tropa colocada + o tick (para estimar o dano da batalha)
             level.RecordPlacedUnit(Unit, (int)Unknown1);

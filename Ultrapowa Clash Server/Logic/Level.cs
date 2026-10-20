@@ -80,6 +80,22 @@ namespace UCS.Logic
 
         public void ClearPvpBattleContext()
         {
+            //R-C4: log de diagnostico - mostra QUEM limpou o contexto da batalha
+            //(a lista de tropas colocadas sumia e o PvP ficava com 0 tropas).
+            try
+            {
+                System.Diagnostics.StackTrace st = new System.Diagnostics.StackTrace();
+                string quem = "?";
+                for (int i = 1; i < st.FrameCount && i < 6; i++)
+                {
+                    string m = st.GetFrame(i).GetMethod().Name;
+                    if (m != "ClearPvpBattleContext" && m != "Execute" && m != "ProcessPendingPvpBattle")
+                    { quem = m; break; }
+                }
+                Console.WriteLine("[UCS] R-C4: contexto de batalha LIMPO por " + quem +
+                    " (tropas registradas = " + m_vBattleUnits.Count + ")");
+            }
+            catch { }
             lock (m_vBattleContextLock)
             {
                 m_vHasPendingPvpBattle = false;

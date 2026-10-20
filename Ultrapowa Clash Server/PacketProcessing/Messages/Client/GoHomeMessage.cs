@@ -167,6 +167,17 @@ namespace UCS.PacketProcessing
 
                 int endTick = resultValue;
                 List<KeyValuePair<CombatItemData, int>> units = attacker.GetBattleUnits();
+                //R-C4: diagnostico - lista de tropas colocadas e ticks
+                {
+                    System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                    sb.Append("[UCS] R-C4: batalha attacker=" + attacker.GetPlayerAvatar().GetId() +
+                        " endTick=" + endTick + " tropas=" + units.Count + " [");
+                    for (int i = 0; i < units.Count; i++)
+                        sb.Append((units[i].Key != null ? units[i].Key.GetName() : "?") + "@" +
+                            units[i].Value + (i < units.Count - 1 ? "," : ""));
+                    sb.Append("]");
+                    Console.WriteLine(sb.ToString());
+                }
                 BattleSimulation sim = BattleSimulation.Run(attacker, defender, units, endTick);
 
                 double destructionPct = sim.DestructionPct;
