@@ -18,7 +18,7 @@ namespace UCS.Logic
         //a1 + 4 gameobjecttypes
         //a1 + 8
         //a1 + 12
-        private List<int> m_vIgnoredObjects;//a1 + 16
+        protected List<int> m_vIgnoredObjects;//a1 + 16
         
         public GameObjectFilter()
         {

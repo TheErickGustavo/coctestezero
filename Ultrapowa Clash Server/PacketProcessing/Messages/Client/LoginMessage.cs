@@ -102,6 +102,30 @@ namespace UCS.PacketProcessing
                     }
                 }
                 Console.WriteLine(sb.ToString());
+
+                //R-C5: dump dos storages de tropa (capacidade, uso e slots).
+                System.Text.StringBuilder st2 = new System.Text.StringBuilder();
+                st2.Append("[UCS] R-C5 storages: ");
+                List<Component> comps = level.GetComponentManager().GetComponents(0);
+                for (int i = 0; i < comps.Count; i++)
+                {
+                    UnitStorageComponent usc = comps[i] as UnitStorageComponent;
+                    if (usc == null)
+                        continue;
+                    Building sb2 = usc.GetParent() as Building;
+                    string who = (sb2 != null && sb2.GetBuildingData() != null)
+                        ? sb2.GetBuildingData().GetGlobalID() + ":" + sb2.GetBuildingData().TID + " lvl" + sb2.GetUpgradeLevel()
+                        : "?";
+                    st2.Append("{" + who + " max=" + usc.GetMaxCapacity() +
+                        " used=" + usc.GetUsedCapacity() + " slots=" + usc.GetUnitSlotCount() + " [");
+                    for (int s = 0; s < usc.GetUnitSlotCount(); s++)
+                    {
+                        CombatItemData cd = usc.GetUnitType(s);
+                        st2.Append((cd != null ? cd.GetName() : "?") + "x" + usc.GetUnitCount(s) + " ");
+                    }
+                    st2.Append("]} ");
+                }
+                Console.WriteLine(st2.ToString());
             }
             catch (Exception ex)
             {

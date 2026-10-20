@@ -8,6 +8,7 @@ using System.Configuration;
 using UCS.PacketProcessing;
 using UCS.Core;
 using UCS.GameFiles;
+using System.Windows;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -57,6 +58,11 @@ namespace UCS.Logic
             //Console.WriteLine(GetMaxTrainCount());
             //Console.WriteLine(GetTotalCount());
             //Console.WriteLine(cd.GetHousingSpace());
+            //R-C5: NAO checar o espaco de habitacao aqui. O cliente 7.65 nao checa
+            //(ele so limita pela fila do quartel) e, se o servidor recusasse a compra,
+            //o cliente e o servidor divergiam: o jogo mostrava a tropa comprada mas o
+            //servidor nunca a tinha (ex.: comprar um Dragao de 20 espacos com a vila
+            //em 265/275). O espaco e tratado na entrega (ProductionCompleted).
             return (GetMaxTrainCount() >= GetTotalCount() + cd.GetHousingSpace());
         }
 
@@ -180,39 +186,53 @@ namespace UCS.Logic
         public bool ProductionCompleted()
         {
             bool result = false;
-            //localiser le camp le plus proche pour envoyer l'unit
-            //incrementer ce camp
-            ComponentFilter cf = new ComponentFilter(0);
-            int x = GetParent().X;
-            int y = GetParent().Y;
+            if (m_vUnits.Count == 0)
+                return result;
+            CombatItemData cd = (CombatItemData)m_vUnits[0].Data;
             ComponentManager cm = GetParent().GetLevel().GetComponentManager();
-            Component c = cm.GetClosestComponent(x, y, cf);
 
-            while (c != null)
+            //R-C5: busca DIRETA pelo storage de tropas mais proximo que ACEITE a unidade.
+            //A versao anterior usava ComponentManager.GetClosestComponent + ComponentFilter
+            //com lista de "ignorados"; o filtro acabava rejeitando TODOS os predios
+            //(a lista de ignorados ja vinha populada), entao nenhuma tropa era entregue
+            //e elas ficavam na fila do quartel para sempre.
+            List<Component> storages = cm.GetComponents(0);
+            UnitStorageComponent best = null;
+            double bestDistance = double.MaxValue;
+            Vector from = new Vector(GetParent().X, GetParent().Y);
+            for (int i = 0; i < storages.Count; i++)
             {
-                Data d = null;
-                if (m_vUnits.Count > 0)
-                    d = m_vUnits[0].Data;
-                if (!((UnitStorageComponent)c).CanAddUnit((CombatItemData)d))
+                UnitStorageComponent st = storages[i] as UnitStorageComponent;
+                if (st == null || st.IsSpellForge)
+                    continue;
+                if (!st.CanAddUnit(cd))
+                    continue;
+                GameObject go = st.GetParent();
+                if (go == null)
+                    continue;
+                double distance = (from - go.GetPosition()).LengthSquared;
+                if (distance < bestDistance)
                 {
-                    //Storage camp is full
-                    cf.AddIgnoreObject(c.GetParent());
-                    c = cm.GetClosestComponent(x, y, cf);
+                    bestDistance = distance;
+                    best = st;
                 }
-                else
-                    break;
             }
 
-            if(c != null)
+            if (best != null)
             {
-                var cd = (CombatItemData)m_vUnits[0].Data;
-                ((UnitStorageComponent)c).AddUnit(cd);
-                StartProducingNextUnit();             
+                best.AddUnit(cd);
+                StartProducingNextUnit();
                 result = true;
             }
             else
             {
                 m_vIsWaitingForSpace = true;
+                Building pb = GetParent() as Building;
+                Console.WriteLine("[UCS] R-C5 prod: nenhum storage com espaco para " +
+                    (cd != null ? cd.GetName() : "?") + " perto de " +
+                    (pb != null && pb.GetBuildingData() != null ? pb.GetBuildingData().GetGlobalID() + " " + pb.GetBuildingData().TID + " lvl" + pb.GetUpgradeLevel() : "?") +
+                    " fila=" + GetTotalCount() + " storagesNaVila=" + storages.Count +
+                    " vilaMax=" + cm.GetTotalMaxHousing() + " vilaUsed=" + cm.GetTotalUsedHousing());
             }
             return result;
         }
@@ -245,9 +265,16 @@ namespace UCS.Logic
                             int trainingTime = newcd.GetTrainingTime(ca.GetUnitUpgradeLevel(newcd));
                             m_vTimer.StartTimer(trainingTime, GetParent().GetLevel().GetTime());
                         }
+                        else
+                        {
+                            //R-C5: fila vazia = nada em producao. Sem isso o timer
+                            //continuava correndo e o cliente mostrava uma tropa
+                            //fantasma ("o quartel continua fazendo" apos cancelar).
+                            m_vTimer = null;
+                        }
                     }
                 }
-            }    
+            }
         }
 
         public override void Load(JObject jsonObject)
@@ -256,13 +283,10 @@ namespace UCS.Logic
             if (unitProdObject == null)
                 return;
             m_vIsSpellForge = (unitProdObject["unit_type"].ToObject<int>() == 1);
-            var timeToken = unitProdObject["t"];
-            if (timeToken != null)
-            {
-                m_vTimer = new Timer();
-                int remainingTime = timeToken.ToObject<int>();
-                m_vTimer.StartTimer(remainingTime, GetParent().GetLevel().GetTime());
-            }
+
+            //R-C5: carrega a FILA antes do timer: so cria o timer se houver fila.
+            //Com "t" > 0 e a fila vazia o cliente mostrava uma tropa em producao
+            //fantasma (o quartel "continua fazendo" tropas que foram canceladas).
             JArray unitJsonArray = (JArray)unitProdObject["slots"];
             if (unitJsonArray != null)
             {
@@ -272,6 +296,14 @@ namespace UCS.Logic
                     int cnt = unitJsonObject["cnt"].ToObject<int>();
                     m_vUnits.Add(new DataSlot(ObjectManager.DataTables.GetDataById(id),cnt));
                 }
+            }
+
+            var timeToken = unitProdObject["t"];
+            if (timeToken != null && m_vUnits.Count >= 1)
+            {
+                m_vTimer = new Timer();
+                int remainingTime = timeToken.ToObject<int>();
+                m_vTimer.StartTimer(remainingTime, GetParent().GetLevel().GetTime());
             }
         }
 
@@ -284,14 +316,16 @@ namespace UCS.Logic
             else
                 unitProdObject.Add("unit_type",0);
 
-            //R-C5: o cliente 7.65 espera SEMPRE "t" e "slots" no unit_prod (mesmo com a
-            //fila vazia). Sem esses campos o parser do cliente entra em loop e o app
-            //morre com StackOverflow em GameApp.update (GLThread). Format conferido
-            //contra o golden 24101 (que abria sem crash).
-            if (m_vTimer != null)
-                unitProdObject.Add("t", m_vTimer.GetRemainingSeconds(GetParent().GetLevel().GetTime()));
-            else
-                unitProdObject.Add("t", 0);
+            //R-C5: o cliente 7.65 SEMPRE espera "t" e "slots" no unit_prod (sem eles o
+            //parser entra em loop e o app morre). Alem disso, "t" com a fila VAZIA faz o
+            //cliente mostrar uma tropa em producao fantasma (o quartel "continua
+            //fazendo" tropas depois de cancelado). Com a fila vazia, t = 0.
+            int remaining = 0;
+            if (m_vTimer != null && GetSlotCount() >= 1)
+                remaining = m_vTimer.GetRemainingSeconds(GetParent().GetLevel().GetTime());
+            if (remaining < 0)
+                remaining = 0;
+            unitProdObject.Add("t", remaining);
 
             JArray unitJsonArray = new JArray();
             foreach(var unit in m_vUnits)

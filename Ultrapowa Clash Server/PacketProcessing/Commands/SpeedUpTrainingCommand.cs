@@ -47,11 +47,15 @@ namespace UCS.PacketProcessing
                         }
                         if (ca.HasEnoughDiamonds(cost))
                         {
-                            if (upc.HasHousingSpaceForSpeedUp())
-                            {
-                                ca.UseDiamonds(cost);
-                                upc.SpeedUp();
-                            }
+                            //R-C5: antes exigia que a FILA INTEIRA coubesse no espaco de
+                            //habitacao (HasHousingSpaceForSpeedUp) -> com muitas tropas
+                            //compradas (ex.: 240 bararianos) o speed-up era bloqueado e as
+                            //tropas ficavam NA FILA para sempre (nunca apareciam no
+                            //acampamento nem no ataque). Agora entrega o que couber.
+                            if (!upc.HasHousingSpaceForSpeedUp())
+                                Debugger.WriteLine("[UCS] SpeedUp: espaco insuficiente; entrega parcial");
+                            ca.UseDiamonds(cost);
+                            upc.SpeedUp();
                         }
                     }
                 }

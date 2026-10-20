@@ -200,3 +200,4 @@ PacketProcessing/ChatCommands.cs
 ./PacketProcessing/Messages/Server/GoogleServiceAccountAlreadyBoundMessage.cs
 ./PacketProcessing/Messages/Server/GoogleServiceAccountBoundMessage.cs
 ./Logic/GoogleBindService.cs
+PacketProcessing/GameOpCommands/GiveGameOpCommand.cs

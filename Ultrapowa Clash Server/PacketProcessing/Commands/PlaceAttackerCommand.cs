@@ -35,6 +35,8 @@ namespace UCS.PacketProcessing
         public override void Execute(Level level)
         {
             //R-C5: log do nivel da tropa colocada (o cliente informa o nivel exato).
+            //P-7: o Unknown1 pode ser o NIVEL da tropa - dado essencial para estimar
+            //o battle score no servidor.
             Console.WriteLine("[UCS] R-C5 place: unit=" + (Unit != null ? Unit.GetName() : "?") +
                 " unknown1(nivel?)=" + Unknown1 + " x=" + X + " y=" + Y);
             List<Component> components = level.GetComponentManager().GetComponents(0);
