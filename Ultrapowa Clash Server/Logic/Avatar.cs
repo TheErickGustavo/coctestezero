@@ -219,6 +219,21 @@ namespace UCS.Logic
             }
         }
 
+        //R-C5: leitores do estado do heroi (vida e estado). O comando de reviver com
+        //gemas (0x212) e reenviado pelo cliente 7.65 a cada vez que a tela de ataque e
+        //montada; sem esta checagem o servidor cobrava as gemas varias vezes.
+        public int GetHeroHealth(HeroData hd)
+        {
+            int index = GetDataIndex(m_vHeroHealth, hd);
+            return index == -1 ? 0 : m_vHeroHealth[index].Value;
+        }
+
+        public int GetHeroState(HeroData hd)
+        {
+            int index = GetDataIndex(m_vHeroState, hd);
+            return index == -1 ? 0 : m_vHeroState[index].Value;
+        }
+
         //R-C5: ativa o heroi (Rei/Rainha) para ele aparecer na tela de ataque.
         //So faz isso se a VILA TEM o altar do heroi: numa vila sem altar o cliente
         //7.65 crasha com SIGSEGV ao tentar desenhar o heroi.

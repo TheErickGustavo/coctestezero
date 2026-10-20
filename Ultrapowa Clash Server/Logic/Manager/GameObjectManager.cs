@@ -117,6 +117,11 @@ namespace UCS.Logic
                 Building b = (Building)go;
                 JObject jsonObject = new JObject();
                 jsonObject.Add("data", b.GetBuildingData().GetGlobalID());
+                //R-C5: o jogo 7.65 manda o "id" do objeto (ex.: 500000171). Sem ele o
+                //cliente 7.65 nao consegue ligar o heroi ao altar nem achar o castelo do
+                //cla (que nao aparecia na tela de ataque) - e os ids que o cliente manda
+                //nos comandos (ex.: 0x1DCD654B) sao esses mesmos.
+                jsonObject.Add("id", b.GlobalId);
                 b.Save(jsonObject);
                 jsonBuildingsArray.Add(jsonObject);
             }
@@ -188,6 +193,24 @@ namespace UCS.Logic
                 Building b = new Building(bd, m_vLevel);
                 AddGameObject(b);
                 b.Load(jsonBuilding);
+                //R-C5: restaura o "id" original do objeto (o jogo real salva o id no
+                //JSON). Sem isso o id mudava a cada carga da vila e o cliente perdia a
+                //ligacao entre o heroi/castelo e o predio.
+                if (jsonBuilding["id"] != null)
+                {
+                    try
+                    {
+                        int savedId = jsonBuilding["id"].ToObject<int>();
+                        if (savedId > 0)
+                        {
+                            b.GlobalId = savedId;
+                            int idx = savedId - GlobalID.CreateGlobalID(500, 0);
+                            if (idx >= m_vGameObjectsIndex[0])
+                                m_vGameObjectsIndex[0] = idx + 1;
+                        }
+                    }
+                    catch { }
+                }
             }
 
             JArray jsonTraps = (JArray)jsonObject["traps"];

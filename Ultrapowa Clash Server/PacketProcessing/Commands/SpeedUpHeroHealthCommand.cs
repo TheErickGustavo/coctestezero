@@ -68,6 +68,25 @@ namespace UCS.PacketProcessing
             if (cost > 5000)
                 cost = 5000;
 
+            //R-C5: o cliente 7.65 REENVIA este comando sozinho toda vez que a tela de
+            //ataque e montada (ele acha que o heroi continua ferido). Sem esta
+            //checagem o servidor cobrava as gemas varias vezes (21 vezes num teste,
+            //mais de 10.000 gemas). Se o heroi ja esta com a vida cheia e disponivel,
+            //o comando e um no-op: nao cobra nada.
+            int curLvl = ca.GetUnitUpgradeLevel(hd);
+            int maxHp = 0;
+            if (hd.Hitpoints != null && hd.Hitpoints.Count > 0)
+            {
+                int hidx = (curLvl > 0 && curLvl < hd.Hitpoints.Count) ? curLvl : 0;
+                maxHp = hd.Hitpoints[hidx];
+            }
+            if (maxHp > 0 && ca.GetHeroHealth(hd) >= maxHp && ca.GetHeroState(hd) == 0)
+            {
+                Debugger.WriteLine("[UCS] R-C5: heroi " + hd.GetName() +
+                    " ja esta vivo e disponivel - revive ignorado (sem custo)");
+                return;
+            }
+
             if (!ca.HasEnoughDiamonds(cost))
             {
                 Debugger.WriteLine("[UCS] R-C5: SpeedUpHeroHealth - gemas insuficientes (" +
