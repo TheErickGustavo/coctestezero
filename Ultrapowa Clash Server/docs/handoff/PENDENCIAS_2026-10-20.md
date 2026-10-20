@@ -38,9 +38,10 @@ Por que o script e não o `.csproj`:
   `-resource:Database/ucsdb.sqlite.csdl,Database.ucsdb.sqlite.csdl` (idem ssdl/msl).
 - `MySql.Data.Entity.EF6.dll` **não existe** no ambiente → o `App.config` foi ajustado para
   usar só o provider SQLite (o servidor usa `databaseConnectionName=sqliteEntities`).
-- **Qualquer `.cs` novo precisa ser adicionado ao `scripts/sources.rsp`** (casing EXATO do
-  arquivo) — se não, ele simplesmente não é compilado. Foi exatamente o que aconteceu com
-  `PacketProcessing/Commands/EndOfBattleCommand.cs`.
+- **Qualquer `.cs` novo precisa ser adicionado ao `scripts/sources.rsp`** (casing EXATO). O script e o
+  manifesto usados no ambiente Linux não estão versionados na árvore GitHub desta branch; portanto essa inclusão
+  precisa ser conferida no workspace local antes do build. Houve anteriormente um caso de `EndOfBattleCommand.cs`
+  ausente do manifesto.
 
 ### 0.3 Reiniciar o servidor
 
@@ -90,7 +91,7 @@ adb shell dumpsys dropbox --print data_app_crash
 | R-C2a | Ordem 0-based no 24301 (membros do clã) | líder em 1º; símbolo de liga "Campeão" certo |
 | R-C3 | Score/nível do clã no 24301 | "Meu Clã" e busca mostram 8000 / nível 1 |
 | R-T7 | Login, vínculo de conta, mural | não regredir |
-| **R-C4** | **Troféus PvP** | sem 603 = sem combate (não altera nada); resultado aplicado no `GoHomeMessage`; score do clã recalcula na hora (kick/leave/join) e aparece sem relogar |
+| **R-C4** | **Troféus PvP — validação parcial** | sem 603 = sem combate (não altera nada) validado; **a liquidação quando há 603 não é confiável ainda**, porque o campo parece ser `tick`, não destruição. Atualização/persistência do score do clã é um resultado separado já validado |
 | **R-C5** | **Tropas** | acampamento e tela de ataque mostram os mesmos números; golem aparece no multiplayer; produção de tropas funciona de verdade |
 | **R-C6** | **Persistência de recursos** | coletar elixir/ouro credita no servidor e **persiste no DB** (valor permaneceu após fechar/reabrir o jogo) |
 | **R-T7** | **Doações** | "você não tem X no acampamento" sumiu; herói não é doável |
@@ -135,9 +136,13 @@ adb shell dumpsys dropbox --print data_app_crash
   `BuildingId` = **GlobalId do GameObject** (`5000000xx`, gerado por
   `GameObjectManager.GenerateGameObjectGlobalId` = `index + 1000000*(classId+500)`), **não** o
   `data` do prédio.
-- `Unknown1` observed: `1138`, `637`, `689` — **varia entre coletas** e **não é a quantidade
-  coletada** (9 / 81 / 34). Hipótese atual: é o **tempo restante** até o coletor encher, ou
-  alguma unidade interna do recurso.
+- `Unknown1` observado: `1138`, `637`, `689` — varia entre coletas e não coincide com a
+  quantidade que o cliente mostrou. **Nova hipótese forte: é o `tick` do comando**, não tempo,
+  quantidade nem autoridade de produção. O esquema público de protocolo lista o comando 506
+  (`0x1FA`) como `buildingId + tick`; referência cruzada, ainda não específica da versão 7.65:
+  [CommandComponent.json](https://github.com/clugh/coc-messages/blob/master/component/CommandComponent.json).
+  Não creditar `Unknown1` diretamente. Confirmar comparando-o com ticks dos comandos vizinhos
+  numa captura ordenada do mesmo `ExecuteCommandsMessage`.
 - Modelo atual do servidor (`ResourceStorageComponent.GetCollectable`): acúmulo contínuo
   `perHour * elapsed / 3600`, com `elapsed = totalSegundos - restante` e
   `totalSegundos = capacidade * 3600 / perHour` (Elixir Pump lvl10: cap 100000, perHour 2500 → 40h).
@@ -291,12 +296,19 @@ entrada** (ícone de mensagem). Aqui não aparece nada — nem os ataques que o 
 
 ---
 
-### P-7 — Escala do comando 603 (percentual de destruição real)
+### P-7 — Semântica do comando 603 (CRÍTICO: resultado PvP não confiável)
 
-**Sintoma**: o payload de 4 bytes do comando **603 (`EndOfBattleCommand`, 0x025B)** **não é o
-percentual de destruição**. Dados reais coletados (cliente 7.65.5):
+**Correção da hipótese anterior, revisão de 20/10/2026:** não há evidência suficiente para chamar o
+valor do comando 603 de `damage points`. Um esquema público de protocolo identifica o comando 603
+(`End combat`) com um único campo `tick: INT`; o comando 506 (`Collect resources`) também termina
+em `tick: INT`. Fonte de referência cruzada (não é uma captura específica do 7.65):
+[CommandComponent.json](https://github.com/clugh/coc-messages/blob/master/component/CommandComponent.json).
+O payload local de 603 tem exatamente 4 bytes, compatível com esse campo. **Tratar o inteiro como dano
+ou percentual está sem sustentação e deve ser considerado um bug de lógica, não uma calibração incompleta.**
 
-| horário | value (hex) | value (dec) | % que o cliente mostrou | scores atacante/defensor | delta que o cliente mostrou |
+Dados observados (preservados; o campo `value` pode ser o tick):
+
+| horário | value (hex) | value (dec) | % que o cliente mostrou | scores atacante/defensor | delta do cliente |
 |---|---|---|---|---|---|
 | 07:45:26 | `00000236` | 566 | – | – | – |
 | 07:54:39 | `00000115` | 277 | 2% | 4000/4000 | – |
@@ -307,38 +319,32 @@ percentual de destruição**. Dados reais coletados (cliente 7.65.5):
 | 14:50:30 | – | 5188 | 2% | 3960/4040 | -15 |
 | 15:07:49 | – | 712 | 2% | 3960/4040 | -12 |
 
-**Conclusão atual**: o value é "damage points" (HP danificado) — **não** dá para derivar a %
-de destruição a partir dele (valores 693 e 5188 ambos deram 2%).
+**O que o código faz de arriscado hoje** (`EndOfBattleCommand.Execute` → `GoHomeMessage.ProcessPendingPvpBattle`):
 
-**O que o servidor faz hoje** (`GoHomeMessage.ProcessPendingPvpBattle`):
+- Registra o único inteiro como `ResultValue` e interpreta a presença do comando 603 como prova de resultado.
+- Calcula `destructionPct = 100 * ResultValue / HP_total`, escolhe vitória em 50% e usa essa %
+  para o bônus/delta de troféus. Isso pode transformar um contador/tick em destruição fictícia.
+- A própria documentação/comentários do código divergem: o início de `GoHomeMessage` fala em
+  percentual em décimos (`500 == 50%`), enquanto a implementação fala em `damage points`/HP total.
+- Mesmo com percentual real, o código não observa estrelas nem trata explicitamente destruição do
+  Centro da Vila abaixo de 50%; portanto `destructionPct >= 50` não reproduz todos os resultados do CoC.
+- Como o inteiro vem do cliente, não pode ser usado como evidência autoritativa de dano/troféus sem validar
+  primeiro o formato e a origem no protocolo.
 
-```
-hpTotalDefensor = ObjectManager.GetAttachableHpTotal(defensor)   // Σ HP dos prédios, sem muros
-destruicao%     = 100.0 * value / hpTotalDefensor                 // ≈5,66% no caso 5188
-vitória         = destrucao% >= 50                               // 1 estrela = 50%
-bonus           = round(0.2 * destrucao%)
-delta           = vitória ? round((20 + bonus) * ratio^13)
-                           : -round((20 - bonus) / ratio^13)
-ratio           = troféus do defensor / troféus do atacante
-```
+**Próximo passo seguro**
 
-O `ratio^13` foi **calibrado empiricamente** (3 dos 5 casos bateram exatos; os outros erram ±1-2).
+1. Em uma captura de 7.65.5, guarde a mensagem `14102` completa, contagem de comandos, IDs e payloads em
+   ordem — não apenas a linha isolada de `unknown-commands.log`.
+2. Compare o inteiro 603 com os ticks dos comandos `PlaceAttacker`/`CastSpell` e com a progressão do cliente
+   durante um combate sem implantação, uma implantação com 0% e um ataque que mostre percentual conhecido.
+3. Localize no binário `LogicEndCombatCommand` os campos lidos/escritos e procure outra mensagem que transporte
+   estrelas/percentual. O servidor atual não simula dano nem recebe eventos de edifícios destruídos.
+4. Até resolver isso, classifique a parte de liquidação PvP como **experimental/não validada**. Preserve a
+   proteção comprovada “sem 603 = não alterar troféus”; não use a fórmula atual para afirmar vitória/derrota real.
 
-**Perguntas**
-
-1. Existe alguma forma de o servidor saber a **% de destruição real** no CoC 7.65? (o cliente
-   calculou 2% e 16% — o servidor precisa concordar)
-2. A fórmula real de troféus do CoC 2015 (antes do patch de março/2016) é conhecida? Ela
-   depende só dos troféus + % de destruição, ou de mais dados?
-3. O `value` do 603 pode ser comparado com o **"battle score total"** do defensor (que o
-   servidor poderia computar com a tabela `StrengthWeight` do CSV do jogo
-   `v7.65.5/logic/buildings.csv`, coluna 105)? As amostras de `StrengthWeight` do CSV são
-   100, 99, 98… por nível.
-
-**Onde mexer**: `PacketProcessing/Messages/Client/GoHomeMessage.cs`,
-`Core/ObjectManager.cs` (`GetAttachableHpTotal`), `Logic/Level.cs` (contexto PvP).
-
----
+**Onde mexer depois da captura:** `Commands/EndOfBattleCommand.cs`, `GoHomeMessage.cs`, `Level.cs` e, se
+o resultado não vier em pacote separado, o desenho do fluxo de combate. Não ajuste expoente/fórmula de troféus
+antes de obter uma fonte correta para percentual/estrelas.
 
 ### P-8 — Client entrega a tropa ~1s antes do servidor
 
@@ -361,18 +367,15 @@ avatar, mas o valor não é usado no encode.
 
 ---
 
-### P-10 — Delta de troféus erra ±1-2 em relação ao cliente
+### P-10 — Delta de troféus (BLOQUEADO POR P-7)
 
-**Sintoma**: com scores iguais (4000/4000) o cliente mostra **-20** com 2% de destruição e
-**-17** com 16%; com scores 3960/4040 mostra **-12** e o servidor aplica **-14**.
-
-**Hipótese atual (parcial)**: `loss(d) = -(20 - 0.2*d) / ratio^13`.
-Falta o termo do **ratio** (o cliente muda o valor conforme a diferença de troféus dos dois
-jogadores) e talvez um termo de **estrelas** (1 estrela = 50% de destruição / TH destruído).
-
-**Dados para calibrar** (tabela em P-7).
-
----
+Os valores `-20`, `-17`, `-15` e `-12` continuam sendo evidência útil, mas **não calibrar uma fórmula de
+delta em função da coluna `value` de 603 enquanto ela provavelmente é `tick`**. O `ratio^13` é uma
+hipótese empírica e não prova a fórmula histórica do CoC 7.65. Primeiro descobrir a origem de stars/%;
+depois comparar atacante/defensor antes e depois, pontuação de ambos, Centro da Vila destruído, tempo e
+todas as amostras de 7.65. Anotar separadamente: (a) presença do comando 603, (b) resultado visual do cliente,
+(c) delta mostrado, (d) scores persistidos no DB. Não considerar R-C4 plenamente validado até esses pontos
+concordarem.
 
 ### P-11 — `unit_prod` sempre precisa de `"t"` e `"slots"`
 
@@ -383,6 +386,119 @@ tem que manter esse formato — ver `UnitProductionComponent.Save()` e o golden
 
 ---
 
+## 2.1 ACHADOS ADICIONAIS DA REVISÃO DE CÓDIGO (20/10/2026)
+
+Estes itens vieram da inspeção dos fontes desta branch. São achados de código/protocolo, não testes práticos no Android.
+
+### A-1 — Estado de recursos pode se perder quando o coletor está cheio (P-1 / persistência)
+
+`ResourceStorageComponent.Load()` chama `SetupProduction()`, que cria um timer novo, lê `res_prod.avail` para
+`m_vCurrentResources` e só substitui o timer se `res_prod.t > 0`. `GetCollectable()` não consulta
+`m_vCurrentResources`; ele retorna a capacidade quando o timer é nulo, ou calcula tudo a partir do timer.
+Logo, quando um coletor cheio é salvo com `t=0` e `avail=cap`, `Load()` mantém o timer cheio recém-criado
+e o próximo `GetCollectable()` pode retornar quase zero: o `avail` persistido é ignorado. Além disso, produção
+durante o tempo em que servidor/conta ficam descarregados não é reconstruída pelo código atual.
+**Reprodução proposta:** comparar `res_prod` no DB antes/depois de reiniciar com coletor vazio, parcial e cheio;
+logar `t`, `avail`, capacidade, `perHour`, `m_vTotalSeconds`, restante do timer e valor creditado. Corrigir em
+um patch isolado e preservar o formato `unit_prod` (`t` + `slots`) em todas as respostas 24101.
+
+### A-2 — Pedido de tropas já tem modelo de servidor; falta o tipo de stream-entry do cliente (P-2)
+
+`TroopRequest`, `Alliance.AddOrUpdateTroopRequest` e `AllianceTroopService.Donate()` já mantêm pedidos e
+validam tropas/capacidade. O problema visual está no envio: `RequestAllianceUnitsCommand.Execute()` converte
+o pedido em `ChatBroadcast.MakeEntry(...)`, ou seja, texto `ChatStreamEntry` tipo 2. Um esquema público de
+protocolo descreve `AllianceStreamEntry` extensão tipo 1 como “Troop request”, com dados de capacidade,
+doações, texto opcional e total de tropas; tipo 2 é chat normal. Referência cruzada, a confirmar contra 7.65:
+[AllianceStreamEntry.json](https://github.com/clugh/coc-messages/blob/master/component/AllianceStreamEntry.json).
+**Não começar do zero nem copiar o wire format cegamente:** primeiro capturar/decodificar um pedido real 7.65,
+comparar bytes com `StreamEntry.Encode()` e só então criar uma entrada dedicada, preservando 24312.
+
+### A-3 — Comando 553 (`0x0229`) pode ser conhecido e hoje não está mapeado
+
+Os logs guardam várias mensagens `cmd=553 len=8` com payloads de dois inteiros. A `CommandFactory` atual
+não mapeia `0x0229`; quando encontra um comando desconhecido, `CommandFactory.Read()` consome todos os bytes
+restantes do envelope e `ExecuteCommandsMessage.Process()` dá `break` ao receber `null`. Se 553 aparecer antes
+de outros comandos no mesmo envelope, pode ocultá-los. O esquema externo acima descreve id 553 como dois
+inteiros, o último `tick`, mas não dá nome semântico — é evidência cruzada, não confirmação do 7.65.
+**Próximo passo:** correlacionar `NumberOfCommands` e os limites de cada envelope capturado; só depois adicionar
+um parser no-op que leia exatamente os dois inteiros. Não trocar `break` por `continue` sem resolver o consumo
+dos bytes, pois não há delimitador de tamanho individual para saltar um comando desconhecido com segurança.
+
+### A-4 — O fallback de matchmaking favorece sempre o menor ID (risco de seleção/estado)
+
+`ObjectManager.GetRandomPlayerExcluding()` primeiro usa níveis em memória; se a lista estiver vazia, itera
+de ID 1 até `GetMaxPlayerId()` e para no primeiro jogador carregável diferente do atacante. Não é uma busca
+aleatória entre todos os jogadores offline nem filtra vilas inválidas, score, Centro da Vila ou elegibilidade.
+Isso pode repetir sempre o mesmo adversário. Antes de mudar, confirmar a escala com duas contas; depois adicionar
+filtros explícitos e escolher aleatoriamente dentro da lista elegível.
+
+### A-5 — `Level.Tick()` pode ser executado concorrente por duas rotas (produção/race)
+
+`ObjectManager.TickOnlineLevels()` chama `level.Tick()` num `System.Threading.Timer` a cada segundo, enquanto
+`ExecuteCommandsMessage.Process()` também chama `level.Tick()` ao processar pacotes. A execução não está
+protegida por lock por `Level`, e `UnitProductionComponent.Tick()` pode completar produção e modificar a fila.
+Os timers são baseados em tempo absoluto, então isto não prova que a produção acelere; prova que duas threads
+podem manipular/serializar o mesmo estado sem sincronização. **Não reduza o intervalo para 200–500 ms ainda.**
+Primeiro tornar o tick serial por `Level`, depois validar R-C5 e R-T7 no telefone.
+
+### A-6 — Campanha: template existe, progresso individual não está ligado (P-3)
+
+`AttackNpcMessage.Process()` só grava `Level.LastNpcAttackLevelId` (estado transitório) e manda `NpcDataMessage`.
+`NpcLevel` tem propriedades `Stars`/`LootedGold`/`LootedElixir`, mas não há fluxo observado que atualize e persista
+esses dados por jogador. `GoHomeMessage` só avança `TutorialStepsCount` para os dois primeiros NPCs; isso não é
+progresso da campanha. Há também um limite de segurança: `NpcDataMessage` indexa `ObjectManager.NpcLevels`
+diretamente com `LevelId - 0x01036640`, sem validar intervalo antes do acesso. Validar IDs sem alterar o pacote
+24133 e definir onde salvar estrelas/saque antes de implementar.
+
+### A-7 — Replay/histórico não tem fluxo de mensagens registrado no servidor (P-6)
+
+A árvore desta branch não contém `BattleReportStreamEntry`; `MessageFactory` não registra o pedido 14114
+`HomeBattleReplay`, e não há classe de resposta 24114 `HomeBattleReplayData`. Um esquema de protocolo público
+lista esses IDs como pistas de pesquisa, mas sua compatibilidade com 7.65 precisa ser confirmada. O servidor
+também não guarda eventos de colocação/dano suficientes para reconstruir sozinho uma replay fiel. Primeiro
+capturar 14114/24114 e descobrir se o cliente envia replay serializado; depois implementar histórico e persistência.
+
+### A-8 — Promoção muda o cargo em memória, mas não cria evento nem confirma persistência/broadcast (P-4)
+
+`PromoteAllianceMemberMessage.Process()` termina em `targetMember.SetRole(m_vRole)`: não gera
+`AllianceEventStreamEntry`, não emite `AllianceStreamEntryMessage` e não força gravação imediata do clã.
+O autosave/logout pode salvar mais tarde, mas a ausência de evento explica por que a mensagem verde não aparece
+e deixa uma janela em que a alteração pode não estar no DB. Preservar a autorização atual e, num patch isolado,
+adicionar persistência/broadcast depois de confirmar os `eventType`/wire fields da versão 7.65.
+
+### A-9 — Implantação de tropa não identifica de qual storage ela veio (P-5 / regressão de contagem)
+
+`PlaceAttackerCommand` recebe coordenadas, tipo de tropa e um inteiro desconhecido; depois remove 1 unidade do
+primeiro `UnitStorageComponent` que contém aquele tipo. Se o jogador tiver o mesmo tipo no acampamento e no
+castelo do clã, o payload parseado não distingue a origem e o servidor pode subtrair do slot errado. Testar
+caso duplicado (mesmo tipo no acampamento e no castelo) com log de cada storage antes/depois.
+
+### A-10 — 24101 pode estar substituído por um golden estático (dependente de arquivo de runtime)
+
+`OwnHomeDataMessage.Encode()` primeiro serializa e grava o estado vivo em `generated-24101.bin`, mas, se existir
+`golden-24101.bin` no diretório de execução, envia o golden estático em vez do pacote recém-gerado. Isso mascara
+qualquer alteração de vila/recursos/tropas. A evidência versionada `generated-24101-live-0558.bin` não é o mesmo
+nome/caminho que a injeção usa; portanto não presumir que ela esteja ativa. Checar o log `GOLDEN INJECTION` e
+verificar se `golden-24101.bin` existe antes de interpretar resultados.
+
+### A-11 — A branch remota não inclui o script/manifesto real de build
+
+A árvore do GitHub desta branch contém o projeto sob `Ultrapowa Clash Server/`, mas não contém
+`scripts/build-server.sh` nem `scripts/sources.rsp`; esses caminhos descritos no ambiente são externos a este
+snapshot do repositório. Portanto, não dá para verificar pelo GitHub se `EndOfBattleCommand.cs` ou futuros `.cs`
+estão no manifesto usado pela máquina Linux. Antes do próximo build, conferir o `sources.rsp` local e adicionar
+o arquivo com casing exato. Usar exclusivamente o script Mono especificado pelo usuário; nenhum build foi executado
+nesta revisão.
+
+### A-12 — Três pendências não devem ser “resolvidas” só trocando um campo
+
+- **P-9 liga vazia:** `ClientAvatar.Encode()` manda `10` fixo embora `m_vLeagueId` e `GetLeagueId()` existam.
+  O comentário diz que 10 vem de capturas, então não substituir pelo valor calculado sem comparar o pacote de
+  perfil e os bytes golden — o vazio pode ser outro campo/mensagem.
+- **Doações:** o caminho server-side já bloqueia heróis e valida espaço/lista de pedido; o visual do botão
+  pertence ao formato da stream-entry. Não refatorar doação de tropa antes de validar a nova entrada.
+- **R-C4:** manter separadas três provas: “sem 603 não muda score” (validado), “score de clã reflete score novo”
+  (validado) e “vitória/estrelas/delta PvP corretos” (não validado por causa da semântica de 603).
 ## 3. INFORMAÇÕES ÚTEIS
 
 ### 3.1 Tabela de ids do jogo (confirmada por dump no servidor)
