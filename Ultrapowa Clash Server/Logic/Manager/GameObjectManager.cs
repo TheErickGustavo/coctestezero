@@ -24,6 +24,10 @@ namespace UCS.Logic
         private List<int> m_vGameObjectsIndex;
         private ComponentManager m_vComponentManager;
         private Level m_vLevel;
+        //R-C5: preserva o respawnVars/exp_ver da vila (o cliente 7.65 usa e o Save nao
+        //podia reescrever com valores fixos).
+        private JObject m_vRespawnVars;
+        private int m_vExpVer = 1;
 
         public GameObjectManager(Level l) 
         {
@@ -164,15 +168,22 @@ namespace UCS.Logic
             //servidor manda. Com "secondsFromLastRespawn" = 0 o cliente acumula
             //normalmente durante a sessao da vila (e zera ao trocar de vila, como no
             //jogo real). Valores "reais" aqui fazem o cliente mostrar 0 (reset).
+            //R-C5: preserva o respawnVars original da vila (o cliente 7.65 usa).
+            //ATENCAO: nao repetir chaves aqui - o JObject lanca "item with the same key
+            //has already been added" e o 24101 saia malformado (o cliente crashava com
+            //SIGSEGV no GLThread ao abrir a vila).
             JObject jsonRespawn = new JObject();
-            jsonRespawn.Add("secondsFromLastRespawn", 0);
-            jsonRespawn.Add("respawnSeed", RespawnSeed);
-            jsonRespawn.Add("time_to_gembox_drop", 2147000000);
-            jsonRespawn.Add("time_in_gembox_period", 2147000000);
-            jsonRespawn.Add("time_to_special_drop", 2147000000);
-            jsonRespawn.Add("time_in_special_period", 2147000000);
-            jsonRespawn.Add("time_to_special_period", 2147000000);
+            if (m_vRespawnVars != null)
+            {
+                foreach (var kv in m_vRespawnVars)
+                    jsonRespawn.Add(kv.Key, kv.Value);
+            }
+            if (jsonRespawn["secondsFromLastRespawn"] == null)
+                jsonRespawn.Add("secondsFromLastRespawn", 0);
+            if (jsonRespawn["respawnSeed"] == null)
+                jsonRespawn.Add("respawnSeed", RespawnSeed);
             jsonData.Add("respawnVars", jsonRespawn);
+            jsonData.Add("exp_ver", m_vExpVer);
             jsonData.Add("last_league_rank", 0);
             jsonData.Add("last_league_shuffle", 150);
 
@@ -181,6 +192,11 @@ namespace UCS.Logic
 
         public void Load(JObject jsonObject)
         {
+            //R-C5: preserva o respawnVars/exp_ver originais da vila
+            if (jsonObject["respawnVars"] != null)
+                m_vRespawnVars = (JObject)jsonObject["respawnVars"];
+            if (jsonObject["exp_ver"] != null)
+                m_vExpVer = jsonObject["exp_ver"].ToObject<int>();
             JArray jsonBuildings = (JArray)jsonObject["buildings"];
             foreach(JObject jsonBuilding in jsonBuildings)
             {
