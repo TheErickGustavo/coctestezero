@@ -258,12 +258,15 @@ namespace UCS.Logic
                     }
                     if (hp <= 0)
                         continue;
-                    SetHeroHealth(hd, hp);
-                    //R-C5: state=2 = heroi DISPONIVEL na vila. O 0 significava
-                    //"ferido/morto" e o cliente 7.65 tratava o heroi como indisponivel
-                    //(pedindo revive com gemas a cada tela de ataque e mostrando o
-                    //tempo de recuperacao). 1=em upgrade, 3=acabou de subir de nivel.
-                    SetHeroState(hd, 2);
+                    //R-C5: o cliente 7.65 mostra como "tempo de recuperacao" do heroi
+                    //o hero_health que o servidor manda, em SEGUNDOS (1630 = 27min,
+                    //4453 = 74min = "1h13" - era exatamente o que o usuario via).
+                    //Entao 0 = heroi disponivel na hora (e o cliente para de pedir revive
+                    //com gemas a cada tela de ataque).
+                    SetHeroHealth(hd, 0);
+                    //state 0 = heroi na vila (1=em upgrade, 2=?, 3=acabou de subir).
+                    //O 2 fazia o heroi ficar sempre deitado, entao voltou para 0.
+                    SetHeroState(hd, 0);
                 }
             }
             catch (Exception ex)

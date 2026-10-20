@@ -80,7 +80,7 @@ namespace UCS.PacketProcessing
                 int hidx = (curLvl > 0 && curLvl < hd.Hitpoints.Count) ? curLvl : 0;
                 maxHp = hd.Hitpoints[hidx];
             }
-            if (maxHp > 0 && ca.GetHeroHealth(hd) >= maxHp && ca.GetHeroState(hd) == 2)
+            if (ca.GetHeroHealth(hd) <= 0 && ca.GetHeroState(hd) == 0)
             {
                 Debugger.WriteLine("[UCS] R-C5: heroi " + hd.GetName() +
                     " ja esta vivo e disponivel - revive ignorado (sem custo)");
@@ -105,8 +105,8 @@ namespace UCS.PacketProcessing
             }
             if (hp <= 0)
                 hp = 1;
-            ca.SetHeroHealth(hd, hp);
-            ca.SetHeroState(hd, 2);   //R-C5: 2 = disponivel para atacar
+            ca.SetHeroHealth(hd, 0);   //R-C5: 0 = sem tempo de recuperacao = disponivel
+            ca.SetHeroState(hd, 0);
 
             //R-C5: persiste IMEDIATAMENTE. Sem isso a vida do heroi e o saldo de
             //gemas voltavam ao valor anterior quando a vila era recarregada.
