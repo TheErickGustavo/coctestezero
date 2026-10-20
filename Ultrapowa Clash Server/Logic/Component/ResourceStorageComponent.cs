@@ -194,6 +194,22 @@ namespace UCS.Logic
                 m_vCurrentResources[resourceIndex] = count;
         }
 
+        //R-C6: reinicia o estado do coletor (usado pelo /fixaccounts): o acumulado vai
+        //a zero e o timer volta ao tempo completo de enchimento. O cliente 7.65 ignora o
+        //"avail" e recalcula pelo relogio da sessao da vila, entao um "avail" herdado
+        //grande (150.000, vindo do home.json do jogo) so servia pra confundir.
+        public bool ResetCollectorState()
+        {
+            if (m_vProducedIndex < 0 || m_vProducedCapacity <= 0)
+                return false;
+            if (m_vCurrentResources[m_vProducedIndex] == 0 && m_vTimer != null &&
+                m_vTimer.GetRemainingSeconds(GetParent().GetLevel().GetTime()) > 0)
+                return false;
+            m_vCurrentResources[m_vProducedIndex] = 0;
+            StartProductionTimer();
+            return true;
+        }
+
         public int GetCount(int resourceIndex)
         {
             return m_vCurrentResources[resourceIndex];

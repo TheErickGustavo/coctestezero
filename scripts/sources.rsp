@@ -202,3 +202,4 @@ PacketProcessing/ChatCommands.cs
 ./Logic/GoogleBindService.cs
 PacketProcessing/GameOpCommands/GiveGameOpCommand.cs
 Logic/BattleSimulation.cs
+PacketProcessing/GameOpCommands/FixAccountsGameOpCommand.cs

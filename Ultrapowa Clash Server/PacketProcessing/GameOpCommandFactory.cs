@@ -27,6 +27,7 @@ namespace UCS.PacketProcessing
             m_vCommands.Add("/visit", typeof(VisitGameOpCommand));
             m_vCommands.Add("/sysmsg", typeof(SystemMessageGameOpCommand));
             m_vCommands.Add("/give", typeof(GiveGameOpCommand));
+            m_vCommands.Add("/fixaccounts", typeof(FixAccountsGameOpCommand));
         }
 
         public static object Parse(string command)

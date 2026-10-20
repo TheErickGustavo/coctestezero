@@ -226,6 +226,8 @@ namespace UCS.PacketProcessing
                 level.GetPlayerAvatar().SetAllianceId(0);
             //R-C5: sincroniza o contador de tropas do avatar com o storage dos quartéis.
             UnitStorageComponent.SyncAvatarUnitCounts(level);
+            //R-C5: ativa o Rei/Rainha (sem health > 0 o herói não aparece no ataque).
+            level.GetPlayerAvatar().ActivateHeroes();
             DumpBuildingData(level);
             PacketManager.ProcessOutgoingPacket(new OwnHomeDataMessage(this.Client, level));
             //X3: historico do mural - o servidor real NAO manda 24311 (conn27), mas sem ele o mural some ao relogar.

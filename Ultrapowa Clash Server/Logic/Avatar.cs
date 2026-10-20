@@ -219,6 +219,36 @@ namespace UCS.Logic
             }
         }
 
+        //R-C5: ativa os herois (Rei/Rainha). Sem health > 0 e state = "no altar" o
+        //cliente 7.65 nao mostra o heroi na tela de ataque (nem o icone na vila).
+        public void ActivateHeroes()
+        {
+            try
+            {
+                for (int i = 0; i < 2; i++)
+                {
+                    HeroData hd = ObjectManager.DataTables.GetDataById(28000000 + i) as HeroData;
+                    if (hd == null)
+                        continue;
+                    int lvl = GetUnitUpgradeLevel(hd);
+                    int hp = 0;
+                    if (hd.Hitpoints != null && hd.Hitpoints.Count > 0)
+                    {
+                        int idx = lvl > 0 && lvl < hd.Hitpoints.Count ? lvl : 0;
+                        hp = hd.Hitpoints[idx];
+                    }
+                    if (hp <= 0)
+                        continue;
+                    SetHeroHealth(hd, hp);
+                    SetHeroState(hd, 0);   //0 = no altar (disponivel para atacar)
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[UCS] R-C5: erro ao ativar herois: " + ex.Message);
+            }
+        }
+
         public void SetHeroState(HeroData hd, int state)
         {
             int index = GetDataIndex(m_vHeroState, hd);

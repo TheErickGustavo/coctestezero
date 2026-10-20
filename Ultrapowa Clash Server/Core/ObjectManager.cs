@@ -354,6 +354,24 @@ namespace UCS.Core
             }
         }
 
+        //R-C6: salva players + clans imediatamente (usado pelo /fixaccounts e por acoes
+        //que mudam recursos, para nada se perder ao fechar o jogo).
+        public static void SaveAllNow()
+        {
+            try
+            {
+                lock (m_vDatabaseLock)
+                {
+                    m_vDatabase.Save(ResourcesManager.GetInMemoryLevels());
+                    m_vDatabase.Save(m_vAlliances.Values.ToList());
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[UCS] R-C6: falha ao salvar tudo: " + ex.Message);
+            }
+        }
+
         public static void LoadFingerPrint()
         {
             FingerPrint = new FingerPrint(@"gamefiles/fingerprint.json");    
