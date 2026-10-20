@@ -42,18 +42,27 @@ namespace UCS.PacketProcessing
                 " unknown1(tick)=" + Unknown1 + " x=" + X + " y=" + Y);
             //R-C4: registra a tropa colocada + o tick (para estimar o dano da batalha)
             level.RecordPlacedUnit(Unit, (int)Unknown1);
-            List<Component> components = level.GetComponentManager().GetComponents(0);
-            for (int i = 0; i < components.Count; i++)
+            //R-C4/R-T7: a tropa colocada no ataque sai do ACAMPAMENTO (quartel/casa).
+            //Antes o codigo varria TODOS os storages e removia do primeiro que tivesse
+            //aquele tipo - incluindo o CASTELO DO CLA. Resultado: as tropas doadas
+            //sumiam do castelo, o castelo ficava vazio (units: []) e nunca aparecia
+            //na tela de ataque.
+            int removed = AllianceTroopService.RemoveFromArmyCamps(level, Unit, 1);
+            if (removed == 0)
             {
-                UnitStorageComponent c = (UnitStorageComponent)components[i];
-                //R-C5: remove de qualquer nivel (o storage e recarregado com nivel -1,
-                //mas tropas treinadas podem ter nivel real) e desconta do avatar.
-                if (c.IsSpellForge)
-                    continue;
-                if (c.GetUnitTypeIndex(Unit) != -1)
+                //R-C5: fallback - o storage pode ser o quartel com a tropa em outro
+                //nivel (o RemoveFromArmyCamps ja remove de qualquer nivel).
+                List<Component> components = level.GetComponentManager().GetComponents(0);
+                for (int i = 0; i < components.Count; i++)
                 {
-                    var storageCount = c.GetUnitCountByData(Unit);
-                    if (storageCount >= 1)
+                    UnitStorageComponent c = (UnitStorageComponent)components[i];
+                    if (c.IsSpellForge)
+                        continue;
+                    Building sb = c.GetParent() as Building;
+                    if (sb != null && sb.GetBuildingData() != null &&
+                        sb.GetBuildingData().GetGlobalID() == 1000014)
+                        continue;   //NUNCA mexe no castelo do cla
+                    if (c.GetUnitTypeIndex(Unit) != -1 && c.GetUnitCountByData(Unit) >= 1)
                     {
                         c.RemoveUnitsAnyLevel(Unit, 1);
                         break;
