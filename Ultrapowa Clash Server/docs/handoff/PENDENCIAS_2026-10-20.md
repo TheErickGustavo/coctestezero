@@ -490,6 +490,30 @@ estão no manifesto usado pela máquina Linux. Antes do próximo build, conferir
 o arquivo com casing exato. Usar exclusivamente o script Mono especificado pelo usuário; nenhum build foi executado
 nesta revisão.
 
+### A-13 — O upgrade de coletor não recalcula produção/capacidade corretamente (P-1)
+
+`ConstructionItem.SetUpgradeLevel()` chama `ResourceStorageComponent.SetMaxArray()` com
+`BuildingData.GetMaxStoredResourceCounts(level)`. Esse método lê `MaxStoredGold/Elixir/...`, colunas
+que o handoff já identificou como vazias no CSV 7.65.5; portanto, ao trocar nível, o `SetMaxArray()`
+pode substituir por zero a capacidade de armazenamento agregada e disparar `RefreshResourcesCaps()`.
+Não há chamada de `ResourceStorageComponent.SetupProduction()` no caminho de `SetUpgradeLevel()`/
+`FinishConstruction()`, então os campos `m_vProducedCapacity`, `m_vPerHour` e o timer podem continuar
+com os números do nível anterior. O `Load()` corrige parte disso ao iniciar a sessão, mas não o upgrade
+ao vivo. **Teste específico:** guardar cap/ResourceMax/perHour/timer antes e depois de evoluir um coletor,
+ver `GetMax(resource)` e o JSON 24101 antes de reiniciar e depois de reiniciar. A correção, se confirmada,
+deve atualizar produção e caps num único fluxo e não alterar o formato serializado do cliente.
+
+### A-14 — Capacidade logada não bate com a tabela de nível citada no handoff (P-1)
+
+O log de calibração mostra `lvl10 ... disponivel=18177 cap=150000`, enquanto a própria documentação
+descreve a bomba de elixir nível 10 como `ResourceMax=100000` (e usa 40h a 2500/h). `SetupProduction()`
+indexa `ResourceMax` e `ResourcePerHour` diretamente com `b.GetUpgradeLevel()`. `ConstructionItem`
+começa com `UpgradeLevel=-1` e persiste o campo `lvl`, mas ainda precisamos confirmar se o número do
+log/JSON é zero-based e qual nível visual o cliente exibe. Não assumir que a fórmula de produção é o
+único problema: pode haver também uma linha CSV/índice de nível deslocado, o que explicaria a capacidade
+e o tempo de enchimento maiores. **Teste:** para a mesma bomba, registrar `json.lvl`, nível que aparece
+na UI, índice escolhido, `ResourceMax[index]`, `ResourcePerHour[index]`, `m_vProducedCapacity` e timer.
+Não diminuir a capacidade por hardcode; acertar o mapeamento de nível primeiro.
 ### A-12 — Três pendências não devem ser “resolvidas” só trocando um campo
 
 - **P-9 liga vazia:** `ClientAvatar.Encode()` manda `10` fixo embora `m_vLeagueId` e `GetLeagueId()` existam.
