@@ -91,3 +91,46 @@ o protocolo é client-authoritative e o servidor precisa simular).
 - `adb reverse tcp:9341 tcp:9340` — o reverse se perde quando o USB cai.
 - O watcher do servidor precisa de `setsid` (senão morre junto com o shell).
 - O `uczero.log` chegou a 22 MB com os logs de diagnóstico — rotacionar (`mv ucs-zero.log ucs-zero.log.old`).
+
+---
+
+## 5. ATUALIZAÇÃO 20/10 (final do dia)
+
+### Causa-raiz mais grave encontrada: `ResourcesManager.LoadLevel` usava `TryAdd`
+Se já existisse uma entrada do id no dicionário `m_vInMemoryLevels` (de um login
+anterior, sem logout), a entrada antiga continuava lá. Consequências:
+- o **save periódico gravava o estado de um level OBSOLETO** no banco (por cima do
+  estado real do jogador, que vivia no level do login) → o estado do jogador
+  (coletor, fila de treino, castelo, gemas) se perdia;
+- os **comandos admin** (`/give`, `/castelo`) pegavam essa cópia e mexiam nela →
+  as gemas e as tropas doadas só "apareciam" quando o jogador relogava.
+**Correção:** `LoadLevel` agora **substitui** a entrada (`m_vInMemoryLevels[id] = level`)
+e `LogPlayerIn` sempre registra o level atual. ✅ validado (castelo e gemas
+persistem agora).
+
+### Other correções validadas
+- `res_prod` (campo inventado pelo UCS) removido dos prédios que não são coletores.
+- `PlaceAttackerCommand` não mexe mais no castelo do clã (usava o primeiro storage
+  com aquele tipo → esvaziava o castelo).
+- `SyncAvatarUnitCounts` exclui o castelo **1000014** (antes excluía 1000143, que não
+  existe) → a tropa doada não aparece mais no acampamento.
+- Chat do **clã** passou a delegar ao `GameOpCommandFactory` (antes só `/doar` e
+  `/ajuda` funcionavam lá; `/give` e `/account` só no chat global).
+- Novo comando admin **`/castelo <avatarId> <tropa> [qtd]`** (o client 7.65 bloqueia
+  doar para si mesmo).
+- 24 contas de teste ("Chief") apagadas (entravam na sorteio do PvP).
+- O servidor crashava em loop com "Address already in use" quando dois watchers
+  subiam juntos — **sempre subir UM watcher só** (`setsid nohup bash scripts/watch-server.sh &`).
+
+### Heróis no CoC 7.65
+`AllianceTroopService.HeroUnitIds = {4000049 (Dragon), 4000073 (Golem), 4000078}` —
+no CoC 2015 os heróis são **Dragão e Golem** (o "Rei"/"Rainha" só existem no CoC
+moderno). O client coloca o herói com **x = 0** e o id global **4000520**.
+
+### Ainda aberto
+- **P-1** o castelo do ATACANTE não aparece na tela de ataque (o do DEFENSOR já
+  aparece ✅, com as tropas doadas).
+- **P-2** PvP às vezes com `tropas=0` (log de diagnóstico instalado).
+- **P-3** custo de 75 de ouro por ataque (por liga).
+- **P-4** % de destruição / loot / vitória (simulação, precisa de calibração).
+- **P-5** vila inicial (tutorial) crasha.
