@@ -35,10 +35,12 @@ namespace UCS.PacketProcessing
         public override void Execute(Level level)
         {
             //R-C5: log do nivel da tropa colocada (o cliente informa o nivel exato).
-            //P-7: o Unknown1 pode ser o NIVEL da tropa - dado essencial para estimar
-            //o battle score no servidor.
+            //P-7: o Unknown1 e o TICK do relogio do JOGO (1/60s) no momento da colocacao:
+            //com ele + o 603 (tick final) o servidor estima o dano, a % de destruicao e o loot.
             Console.WriteLine("[UCS] R-C5 place: unit=" + (Unit != null ? Unit.GetName() : "?") +
-                " unknown1(nivel?)=" + Unknown1 + " x=" + X + " y=" + Y);
+                " unknown1(tick)=" + Unknown1 + " x=" + X + " y=" + Y);
+            //R-C4: registra a tropa colocada + o tick (para estimar o dano da batalha)
+            level.RecordPlacedUnit(Unit, (int)Unknown1);
             List<Component> components = level.GetComponentManager().GetComponents(0);
             for (int i = 0; i < components.Count; i++)
             {

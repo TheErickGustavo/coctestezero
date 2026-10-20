@@ -68,7 +68,23 @@ namespace UCS.PacketProcessing
 
         public static object Read(BinaryReader br)
         {
+            long cmdStart = br.BaseStream.Position;
             uint cm = br.ReadUInt32WithEndian();
+            //R-C4: log de TODOS os comandos (id + payload hex) num arquivo proprio, para
+            //descobrir por onde o loot da batalha viaja (o cliente 7.65 nao manda nenhum
+            //comando de loot conhecido ate agora).
+            try
+            {
+                long pos = br.BaseStream.Position;
+                long remaining = br.BaseStream.Length - pos;
+                byte[] peek = remaining > 0 ? br.ReadBytes((int)Math.Min(remaining, 16)) : new byte[0];
+                if (br.BaseStream.CanSeek)
+                    br.BaseStream.Position = pos;
+                string hex = BitConverter.ToString(peek).Replace("-", "");
+                File.AppendAllText(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "commands.log"),
+                    DateTime.Now.ToString("HH:mm:ss.fff") + " cmd=" + cm + " len=" + peek.Length + " hex=" + hex + Environment.NewLine);
+            }
+            catch { }
             if (m_vCommands.ContainsKey(cm))
             {
                 return Activator.CreateInstance(m_vCommands[cm], br);
@@ -87,6 +103,23 @@ namespace UCS.PacketProcessing
                     Console.WriteLine("\t[UCS] Unknown command " + cm + " payload(" + payload.Length + "): " + hex);
                 }
                 catch { }
+
+                //R-C4: comandos desconhecidos que sabemos que o cliente usa no fim da
+                //batalha (0x220 = 544). Nao e registrado como comando para nao alterar
+                //o fluxo, mas logamos o que veio para investigar o loot.
+                if (cm == 544)
+                {
+                    try
+                    {
+                        long pos = br.BaseStream.Position;
+                        long remaining = br.BaseStream.Length - pos;
+                        byte[] payload = remaining > 0 ? br.ReadBytes((int)remaining) : new byte[0];
+                        string hex = BitConverter.ToString(payload).Replace("-", "");
+                        Console.WriteLine("[UCS] R-C4: comando 544 (0x220) recebido em " +
+                            DateTime.Now.ToString("HH:mm:ss.fff") + " payload(" + payload.Length + "): " + hex);
+                    }
+                    catch { }
+                }
 
                 Console.Write("\t");
                 Console.ForegroundColor = ConsoleColor.Magenta;

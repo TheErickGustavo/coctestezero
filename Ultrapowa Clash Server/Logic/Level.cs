@@ -29,6 +29,7 @@ namespace UCS.Logic
         private int m_vBattleDefenderScore;
         private long m_vBattleDefenderAllianceId;
         private int m_vEndOfBattleValue;
+        private readonly List<KeyValuePair<CombatItemData, int>> m_vBattleUnits = new List<KeyValuePair<CombatItemData, int>>();
 
         public bool HasPendingPvpBattle { get { lock (m_vBattleContextLock) return m_vHasPendingPvpBattle; } }
         public bool HasEndOfBattleResult { get { lock (m_vBattleContextLock) return m_vHasEndOfBattleResult; } }
@@ -88,6 +89,28 @@ namespace UCS.Logic
                 m_vBattleDefenderScore = 0;
                 m_vBattleDefenderAllianceId = 0;
                 m_vEndOfBattleValue = 0;
+                m_vBattleUnits.Clear();
+            }
+        }
+
+        //R-C4: tropas colocadas na batalha (tipo + tick do colocacao). O Unknown1 do
+        //comando 0x258 (PlaceAttacker) e o tick do relogio do JOGO (1/60s). Com isso o
+        //servidor consegue estimar o dano causado (e portanto a % de destruicao e o loot).
+        public void RecordPlacedUnit(CombatItemData cd, int tick)
+        {
+            if (cd == null)
+                return;
+            lock (m_vBattleContextLock)
+            {
+                m_vBattleUnits.Add(new KeyValuePair<CombatItemData, int>(cd, tick));
+            }
+        }
+
+        public List<KeyValuePair<CombatItemData, int>> GetBattleUnits()
+        {
+            lock (m_vBattleContextLock)
+            {
+                return new List<KeyValuePair<CombatItemData, int>>(m_vBattleUnits);
             }
         }
         private Client m_vClient;

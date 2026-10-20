@@ -102,6 +102,16 @@ namespace UCS.PacketProcessing
                 PacketManager.ProcessOutgoingPacket(new AllianceStreamMessage(this.Client, alliance));
         }
 
+        private static void AddResource(ClientAvatar ca, string name, int amount)
+        {
+            if (amount == 0)
+                return;
+            ResourceData rd = ObjectManager.DataTables.GetResourceByName(name);
+            if (rd == null)
+                return;
+            ca.SetResourceCount(rd, ca.GetResourceCount(rd) + amount);
+        }
+
         private void ProcessPendingPvpBattle(Level attacker)
         {
             if (attacker == null || !attacker.HasPendingPvpBattle ||
@@ -147,17 +157,20 @@ namespace UCS.PacketProcessing
                     return;
                 }
 
-                //R-C4b: o payload do 603 sao "damage points" (HP danificado), nao percentual.
-                //A % de destruicao e estimada dividindo pelo HP total atacavel da vila do
-                //defensor (muros nao contam). 1 estrela = 50% de destruicao.
+                //R-C4/P-7: o 603 e o TICK FINAL do relogio do jogo (1/60s) - nao e dano nem
+                //percentual. O servidor tem os ticks de colocacao de cada tropa
+                // (0x258 PlaceAttacker.Unknown1) e a vila do defensor, entao simula a
+                //batalha para saber as estrelas (centro destruido = 1 estrela), a % de
+                //destruicao e o loot roubado.
                 ClientAvatar attackerAvatar = attacker.GetPlayerAvatar();
                 ClientAvatar defenderAvatar = defender.GetPlayerAvatar();
 
-                int hpTotal = ObjectManager.GetAttachableHpTotal(defender);
-                double destructionPct = hpTotal > 0 ? (100.0 * resultValue / hpTotal) : 0.0;
-                if (destructionPct > 100.0)
-                    destructionPct = 100.0;
-                bool attackerWon = destructionPct >= 50.0;
+                int endTick = resultValue;
+                List<KeyValuePair<CombatItemData, int>> units = attacker.GetBattleUnits();
+                BattleSimulation sim = BattleSimulation.Run(attacker, defender, units, endTick);
+
+                double destructionPct = sim.DestructionPct;
+                bool attackerWon = sim.Stars >= 1;   //1 estrela = centro da vila destruido
 
                 //CoC 2015: base 20/20 + bonus de destruicao (0.2 por %) e ajuste pela
                 //razao de trofeus. Calibrado contra o cliente 7.65 (3 casos exatos):
@@ -179,11 +192,24 @@ namespace UCS.PacketProcessing
                 attackerAvatar.SetScore(Math.Max(0, attackerScore + delta));
                 defenderAvatar.SetScore(Math.Max(0, defenderScore - delta));
 
+                //R-C4: credita o LOOT roubado na batalha (o cliente 7.65 mostra o loot na
+                //tela mas nao manda nada ao servidor - o servidor precisa calcular).
+                if (sim.LootGold > 0 || sim.LootElixir > 0 || sim.LootDarkElixir > 0)
+                {
+                    AddResource(attackerAvatar, "Gold", sim.LootGold);
+                    AddResource(attackerAvatar, "Elixir", sim.LootElixir);
+                    AddResource(attackerAvatar, "DarkElixir", sim.LootDarkElixir);
+                }
+
                 Console.WriteLine("[UCS] R-C4: PvP finalizado attacker=" +
                     attackerAvatar.GetId() + " defender=" + defenderId +
-                    " damagePoints=" + resultValue +
-                    " hpTotalDefensor=" + hpTotal +
+                    " tropas=" + units.Count +
+                    " tickFinal=" + endTick +
+                    " dano=" + (long)sim.TotalDamage +
+                    " predios=" + sim.BuildingsDestroyed + "/" + sim.BuildingsTotal +
                     " destrucao=" + destructionPct.ToString("0.00") + "%" +
+                    " estrelas=" + sim.Stars + (sim.TownHallDestroyed ? " (CENTRO DESTRUIDO)" : "") +
+                    " loot=" + sim.LootGold + "ouro/" + sim.LootElixir + "elixir" +
                     " outcome=" + (attackerWon ? "win" : "loss") +
                     " delta=" + delta +
                     " scores=" + attackerAvatar.GetScore() + "/" + defenderAvatar.GetScore());

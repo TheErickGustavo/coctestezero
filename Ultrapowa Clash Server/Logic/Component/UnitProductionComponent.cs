@@ -256,22 +256,26 @@ namespace UCS.Logic
                     if (m_vUnits[index].Value == 0)
                     {
                         m_vUnits.RemoveAt(index);
-                        if(GetSlotCount() >= 1)
-                        {
-                            DataSlot ds = m_vUnits[0];
-                            CombatItemData newcd = (CombatItemData)m_vUnits[0].Data;
-                            ClientAvatar ca = GetParent().GetLevel().GetHomeOwnerAvatar();
-                            m_vTimer = new Timer();
-                            int trainingTime = newcd.GetTrainingTime(ca.GetUnitUpgradeLevel(newcd));
-                            m_vTimer.StartTimer(trainingTime, GetParent().GetLevel().GetTime());
-                        }
-                        else
-                        {
-                            //R-C5: fila vazia = nada em producao. Sem isso o timer
-                            //continuava correndo e o cliente mostrava uma tropa
-                            //fantasma ("o quartel continua fazendo" apos cancelar).
-                            m_vTimer = null;
-                        }
+                    }
+                    //R-C5: reinicia o timer SEMPRE que ainda houver fila. Antes o timer so
+                    //reiniciava quando o slot ZERAVA, entao a 2a tropa da mesma fila ficava
+                    //presa para sempre (a 1a saia normal, a 2a ficava em "looping" /
+                    //"tropa fantasma" - exatamente o sintoma reportado).
+                    if(GetSlotCount() >= 1)
+                    {
+                        DataSlot ds = m_vUnits[0];
+                        CombatItemData newcd = (CombatItemData)m_vUnits[0].Data;
+                        ClientAvatar ca = GetParent().GetLevel().GetHomeOwnerAvatar();
+                        m_vTimer = new Timer();
+                        int trainingTime = newcd.GetTrainingTime(ca.GetUnitUpgradeLevel(newcd));
+                        m_vTimer.StartTimer(trainingTime, GetParent().GetLevel().GetTime());
+                    }
+                    else
+                    {
+                        //R-C5: fila vazia = nada em producao. Sem isso o timer
+                        //continuava correndo e o cliente mostrava uma tropa
+                        //fantasma ("o quartel continua fazendo" apos cancelar).
+                        m_vTimer = null;
                     }
                 }
             }
@@ -304,6 +308,12 @@ namespace UCS.Logic
                 m_vTimer = new Timer();
                 int remainingTime = timeToken.ToObject<int>();
                 m_vTimer.StartTimer(remainingTime, GetParent().GetLevel().GetTime());
+                //R-C5: log do timer restaurado (diagnostico do "reset" ao trocar de vila)
+                Building pbLoad = GetParent() as Building;
+                Console.WriteLine("[UCS] R-C5 prod-load: predio " +
+                    (pbLoad != null && pbLoad.GetBuildingData() != null ? pbLoad.GetBuildingData().GetGlobalID() : 0) + " fila=" + GetTotalCount() +
+                    " tRestante=" + remainingTime + " clockLevel=" +
+                    GetParent().GetLevel().GetTime().ToString("HH:mm:ss"));
             }
         }
 
@@ -325,6 +335,15 @@ namespace UCS.Logic
                 remaining = m_vTimer.GetRemainingSeconds(GetParent().GetLevel().GetTime());
             if (remaining < 0)
                 remaining = 0;
+            //R-C5: log do timer de producao (diagnostico do "reset" ao trocar de vila)
+            if (GetSlotCount() >= 1)
+            {
+                Building pbSave = GetParent() as Building;
+                Console.WriteLine("[UCS] R-C5 prod-save: predio " +
+                    (pbSave != null && pbSave.GetBuildingData() != null ? pbSave.GetBuildingData().GetGlobalID() : 0) + " fila=" + GetTotalCount() +
+                    " tRestante=" + remaining + " clockLevel=" +
+                    GetParent().GetLevel().GetTime().ToString("HH:mm:ss"));
+            }
             unitProdObject.Add("t", remaining);
 
             JArray unitJsonArray = new JArray();
