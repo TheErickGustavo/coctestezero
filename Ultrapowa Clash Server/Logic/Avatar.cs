@@ -259,7 +259,11 @@ namespace UCS.Logic
                     if (hp <= 0)
                         continue;
                     SetHeroHealth(hd, hp);
-                    SetHeroState(hd, 0);   //0 = no altar (disponivel para atacar)
+                    //R-C5: state=2 = heroi DISPONIVEL na vila. O 0 significava
+                    //"ferido/morto" e o cliente 7.65 tratava o heroi como indisponivel
+                    //(pedindo revive com gemas a cada tela de ataque e mostrando o
+                    //tempo de recuperacao). 1=em upgrade, 3=acabou de subir de nivel.
+                    SetHeroState(hd, 2);
                 }
             }
             catch (Exception ex)

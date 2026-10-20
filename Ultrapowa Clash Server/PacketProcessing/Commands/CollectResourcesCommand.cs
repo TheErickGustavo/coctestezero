@@ -81,8 +81,12 @@ namespace UCS.PacketProcessing
                     Debugger.WriteLine("[UCS] Coleta: nada disponivel no predio " + BuildingId);
                     return;
                 }
-                //prefere o valor do cliente (e o que ele vai deduzir do deposito)
-                if (clientAmount > 0)
+                //R-C6/R-C8: credita o valor REAL do servidor (GetCollectable), que e o
+                //mesmo que o cliente exibe (ele calcula pelo "res_time" da vila).
+                //O Unknown1 do 0x1FA e o TICK do relogio do jogo, nao o tempo acumulado:
+                //usar ele fazia o servidor creditar 27 onde o cliente tinha coletado
+                //~11.000 (o recurso sumia ao recarregar a vila).
+                if (available <= 0 && clientAmount > 0)
                     available = clientAmount;
                 var table = ObjectManager.DataTables.GetTable(2);
                 ResourceData rd = (ResourceData)table.GetItemAt(idx);
@@ -90,7 +94,8 @@ namespace UCS.PacketProcessing
                 ca.SetResourceCount(rd, ca.GetResourceCount(rd) + available);
                 storage.Collect();
                 Debugger.WriteLine("[UCS] Coleta: " + available + "x " + rd.GetName() +
-                    " (total " + ca.GetResourceCount(rd) + ")");
+                    " (total " + ca.GetResourceCount(rd) + ")" +
+                    " [servidor=" + available + " clienteUnknown1=" + clientAmount + "]");
                 //R-C6: persiste na hora (o recurso nao pode sumir ao fechar o jogo)
                 ObjectManager.SavePlayerNow(level);
             }
