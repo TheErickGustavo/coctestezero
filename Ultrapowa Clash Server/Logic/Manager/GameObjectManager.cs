@@ -16,6 +16,10 @@ namespace UCS.Logic
 {
     class GameObjectManager
     {
+        //R-C6: periodo do respawn global (12h) e seed do jogo.
+        public const long RespawnPeriod = 43200;
+        public const int RespawnSeed = 0;
+
         private List<List<GameObject>> m_vGameObjects;
         private List<int> m_vGameObjectsIndex;
         private ComponentManager m_vComponentManager;
@@ -155,13 +159,18 @@ namespace UCS.Logic
             }
             jsonData.Add("obstacles", jsonObstaclesArray);
 
-            //RespawnVars / liga (espelho do home real 7.65.5)
+            //R-C6: o cliente 7.65 recalcula o acumulado do coletor pelo RELOGIO DA
+            //SESSAO DA VILA (nao pelo servidor): ele ignora o "avail" e o "t" que o
+            //servidor manda. Com "secondsFromLastRespawn" = 0 o cliente acumula
+            //normalmente durante a sessao da vila (e zera ao trocar de vila, como no
+            //jogo real). Valores "reais" aqui fazem o cliente mostrar 0 (reset).
             JObject jsonRespawn = new JObject();
             jsonRespawn.Add("secondsFromLastRespawn", 0);
-            jsonRespawn.Add("respawnSeed", 0);
+            jsonRespawn.Add("respawnSeed", RespawnSeed);
             jsonRespawn.Add("time_to_gembox_drop", 2147000000);
             jsonRespawn.Add("time_in_gembox_period", 2147000000);
             jsonRespawn.Add("time_to_special_drop", 2147000000);
+            jsonRespawn.Add("time_in_special_period", 2147000000);
             jsonRespawn.Add("time_to_special_period", 2147000000);
             jsonData.Add("respawnVars", jsonRespawn);
             jsonData.Add("last_league_rank", 0);

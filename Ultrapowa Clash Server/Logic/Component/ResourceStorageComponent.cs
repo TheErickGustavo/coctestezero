@@ -133,7 +133,7 @@ namespace UCS.Logic
                 return 0;
             int baseAmount = m_vCurrentResources[m_vProducedIndex];
             if (m_vTimer == null)
-                return m_vProducedCapacity;      //coletor cheio
+                return m_vProducedCapacity;      //coletor cheio (timer expirou)
             try
             {
                 int remaining = m_vTimer.GetRemainingSeconds(GetParent().GetLevel().GetTime());
@@ -172,6 +172,11 @@ namespace UCS.Logic
         public int GetProducedCapacity()
         {
             return m_vProducedCapacity;
+        }
+
+        public int GetPerHour()
+        {
+            return m_vPerHour;
         }
 
         public int Collect()        {
@@ -234,8 +239,12 @@ namespace UCS.Logic
             {
                 int t = resProd["t"] != null ? resProd["t"].ToObject<int>() : 0;
                 int avail = resProd["avail"] != null ? resProd["avail"].ToObject<int>() : 0;
-                if (m_vProducedIndex >= 0)
-                    m_vCurrentResources[m_vProducedIndex] = avail;
+                //R-C6: o cliente 7.65 IGNORA o "avail" do JSON e recalcula o acumulado do
+                //zero pelo tempo de producao (o "avail" herdado do home.json do jogo vem
+                //com o coletor cheio, 150.000, e o cliente mostra so o que produziu).
+                //Entao o servidor tambem parte do zero ao carregar a vila.
+                if (m_vProducedIndex >= 0 && m_vProducedIndex < m_vCurrentResources.Count)
+                    m_vCurrentResources[m_vProducedIndex] = 0;
                 if (t > 0)
                 {
                     m_vTimer = new Timer();
@@ -248,19 +257,21 @@ namespace UCS.Logic
         public override JObject Save(JObject jsonObject)
         {
             JObject resProd = new JObject();
-            int avail = GetCollectable();
-            //P-1: "t" e "avail" tem que ser COERENTES entre si, senao o proximo load
-            //reintroduz divergencia (o servidor acumulava mais que o cliente e o
-            //estado do coletor inflava a cada coleta). t = (cap - avail) / taxa.
+            //R-C6: "avail" e o ACUMULADO real do coletor e "t" o tempo que falta para
+            //encher. Antes gravava avail = GetCollectable() (que devolvia a CAPACIDADE
+            //quando o timer expirava) e t = 0 -> no load seguinte o coletor nascia
+            //"cheio" para sempre, e o servidor creditava 150.000 onde o cliente tinha 100.
+            int accumulated = (m_vProducedIndex >= 0 && m_vProducedIndex < m_vCurrentResources.Count)
+                ? m_vCurrentResources[m_vProducedIndex] : 0;
             int remaining = 0;
-            if (m_vProducedIndex >= 0 && m_vPerHour > 0)
+            if (m_vTimer != null)
             {
-                remaining = (int)((long)(m_vProducedCapacity - avail) * 3600 / m_vPerHour);
+                remaining = m_vTimer.GetRemainingSeconds(GetParent().GetLevel().GetTime());
                 if (remaining < 0)
                     remaining = 0;
             }
             resProd.Add("t", remaining);
-            resProd.Add("avail", avail);
+            resProd.Add("avail", accumulated);
             jsonObject.Add("res_prod", resProd);
             return jsonObject;
         }

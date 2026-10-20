@@ -51,19 +51,39 @@ namespace UCS.PacketProcessing
                 if (idx < 0)
                     return;
                 int available = storage.GetCollectable();
-                //P-1: diagnostico completo do coletor (lvl, capacidade, taxa/hora, timer,
-                //acumulado, tick do servidor e o Unknown1 que o cliente mandou).
+                //R-C6: o Unknown1 do 0x1FA e o ACUMULADO do coletor em TICKS (1/60s):
+                //7249 ticks * (3000/h / 216000) = 100,7 elixir, que era exatamente o
+                //que o cliente coletou. O cliente recalcula o proprio acumulado e ignora
+                //o "avail" do servidor, entao o Unknown1 e a autoridade do cliente.
+                int clientAmount = -1;
+                if (Unknown1 > 0)
+                {
+                    int perHour = storage.GetPerHour();
+                    if (perHour > 0)
+                    {
+                        long amount = (long)Unknown1 * perHour / 216000;
+                        int cap = storage.GetProducedCapacity();
+                        if (amount > cap) amount = cap;
+                        clientAmount = (int)amount;
+                    }
+                }
+                //R-C6: diagnostico completo do coletor (lvl, capacidade, taxa/hora, timer,
+                //acumulado, unknown1 e o valor que o cliente mandou).
                 Debugger.WriteLine("[UCS] Coleta: predio " + BuildingId + " (data " +
                     b.GetBuildingData().GetGlobalID() + " " + b.GetBuildingData().TID +
                     " lvl" + b.GetUpgradeLevel() + ") | " + storage.Describe() +
-                    " | unknown1=" + Unknown1 +
+                    " | unknown1=" + Unknown1 + " (=>" + clientAmount + ")" +
+                    " | servidor=" + available +
                     " | tickServidor=" + (int)level.GetTime().Subtract(new DateTime(1970, 1, 1)).TotalSeconds +
                     " | clockServidor=" + DateTime.Now.ToString("HH:mm:ss"));
-                if (available <= 0)
+                if (available <= 0 && clientAmount <= 0)
                 {
                     Debugger.WriteLine("[UCS] Coleta: nada disponivel no predio " + BuildingId);
                     return;
                 }
+                //prefere o valor do cliente (e o que ele vai deduzir do deposito)
+                if (clientAmount > 0)
+                    available = clientAmount;
                 var table = ObjectManager.DataTables.GetTable(2);
                 ResourceData rd = (ResourceData)table.GetItemAt(idx);
                 ClientAvatar ca = level.GetPlayerAvatar();
