@@ -221,7 +221,7 @@ namespace UCS.Logic
 
         //R-C5: ativa os herois (Rei/Rainha). Sem health > 0 e state = "no altar" o
         //cliente 7.65 nao mostra o heroi na tela de ataque (nem o icone na vila).
-        public void ActivateHeroes()
+        public void ActivateHeroes(Level level)
         {
             try
             {
@@ -230,6 +230,16 @@ namespace UCS.Logic
                     HeroData hd = ObjectManager.DataTables.GetDataById(28000000 + i) as HeroData;
                     if (hd == null)
                         continue;
+                    //R-C5: so ativa o heroi se a VILA TIVER o altar dele. Sem o altar
+                    //(vila inicial do tutorial) o cliente 7.65 crasha com SIGSEGV no
+                    //GLThread ao tentar desenhar o heroi.
+                    int altarId = 1000022 + i;   //1000022 = Altar do Rei, 1000025 = Altar da Rainha
+                    if (level == null || AllianceTroopService.FindBuilding(level, altarId) == null)
+                    {
+                        SetHeroHealth(hd, 0);
+                        SetHeroState(hd, 0);
+                        continue;
+                    }
                     int lvl = GetUnitUpgradeLevel(hd);
                     int hp = 0;
                     if (hd.Hitpoints != null && hd.Hitpoints.Count > 0)

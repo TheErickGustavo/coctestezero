@@ -111,8 +111,13 @@ namespace UCS.Core
             {
                 if (seed == 0)
                     seed = m_vAvatarSeed;
-                pl = new Level(seed);
-                m_vAvatarSeed++;
+                //R-C5: o app manda accountId=0 quando os dados locais foram limpos; usar
+                //esse id criava varias contas com o MESMO id (0). Com seed <= 0 usa o
+                //proximo id livre.
+                long id = seed > 0 ? seed : m_vAvatarSeed;
+                pl = new Level(id);
+                if (id >= m_vAvatarSeed)
+                    m_vAvatarSeed = id + 1;
             }
             pl.LoadFromJSON(m_vHomeDefault);
             m_vDatabase.CreateAccount(pl);
