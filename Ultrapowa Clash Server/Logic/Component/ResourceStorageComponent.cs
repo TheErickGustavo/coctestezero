@@ -232,23 +232,56 @@ namespace UCS.Logic
             //R-C6: recalcula indice/capacidade/timer agora que o nivel do predio ja foi
             //carregado do JSON (no construtor o nivel ainda era -1 -> capacidade 0).
             SetupProduction();
+
+            //R-C6/R-C8: o jogo 7.65 persiste o estado do coletor como "res_time"
+            //(segundos que faltam para ENCHER). E o que o cliente usa para mostrar
+            //quanto tem acumulado - sem isso o coletor volta a zero toda vez que o
+            //jogador entra na vila (ele recalcula a partir do res_time).
+            //Exemplo real do jogo (starting_home 7.65): gold mine lvl1 com
+            //res_time = 8626 (capacidade 500, 200/h -> 9000s para encher).
+            int resTime = -1;
+            if (jsonObject["res_time"] != null)
+            {
+                try { resTime = jsonObject["res_time"].ToObject<int>(); }
+                catch { resTime = -1; }
+            }
+
             JObject resProd = (JObject)jsonObject["res_prod"];
-            if (resProd == null)
-                return;
+            int t = 0;
+            int avail = 0;
+            if (resProd != null)
+            {
+                try
+                {
+                    if (resProd["t"] != null)
+                        t = resProd["t"].ToObject<int>();
+                    if (resProd["avail"] != null)
+                        avail = resProd["avail"].ToObject<int>();
+                }
+                catch { }
+            }
+            if (resTime < 0)
+                resTime = t;
+
             try
             {
-                int t = resProd["t"] != null ? resProd["t"].ToObject<int>() : 0;
-                int avail = resProd["avail"] != null ? resProd["avail"].ToObject<int>() : 0;
-                //R-C6: o cliente 7.65 IGNORA o "avail" do JSON e recalcula o acumulado do
-                //zero pelo tempo de producao (o "avail" herdado do home.json do jogo vem
-                //com o coletor cheio, 150.000, e o cliente mostra so o que produziu).
-                //Entao o servidor tambem parte do zero ao carregar a vila.
+                //R-C6: o cliente 7.65 IGNORA o "avail" do JSON e recalcula o acumulado
+                //pelo res_time. Entao o servidor tambem parte do zero ao carregar a vila.
                 if (m_vProducedIndex >= 0 && m_vProducedIndex < m_vCurrentResources.Count)
                     m_vCurrentResources[m_vProducedIndex] = 0;
-                if (t > 0)
+                if (resTime > 0)
                 {
+                    //parcial: continua enchendo de onde parou
                     m_vTimer = new Timer();
-                    m_vTimer.StartTimer(t, GetParent().GetLevel().GetTime());
+                    m_vTimer.StartTimer(resTime, GetParent().GetLevel().GetTime());
+                }
+                else if (avail <= 0)
+                {
+                    //R-C8: estado legado (vilas antigas gravadas sem res_time e com
+                    //t=0): o coletor esta VAZIO -> comeca a encher. O timer e criado
+                    //com o tempo do nivel (que na carga e o LastUpdateTime do banco),
+                    //entao o tempo em que o jogador ficou fora da vila JA conta.
+                    StartProductionTimer();
                 }
             }
             catch { }
@@ -256,6 +289,24 @@ namespace UCS.Logic
 
         public override JObject Save(JObject jsonObject)
         {
+            //R-C6/R-C8: o jogo 7.65 persiste o coletor como "res_time" (segundos que
+            //faltam para encher) - e o que o cliente usa para calcular o acumulado.
+            //Sem esse campo o coletor aparece zerado toda vez que o jogador abre a
+            //vila, porque o cliente recalcula a producao a partir do zero.
+            //Exemplo real (starting_home 7.65): gold mine lvl1 com res_time = 8626.
+            int resTimeRemaining = 0;
+            if (m_vProducedIndex >= 0)
+            {
+                resTimeRemaining = 0;
+                if (m_vTimer != null)
+                {
+                    resTimeRemaining = m_vTimer.GetRemainingSeconds(GetParent().GetLevel().GetTime());
+                    if (resTimeRemaining < 0)
+                        resTimeRemaining = 0;
+                }
+                jsonObject["res_time"] = resTimeRemaining;
+            }
+
             JObject resProd = new JObject();
             //R-C6: "avail" e o ACUMULADO real do coletor e "t" o tempo que falta para
             //encher. Antes gravava avail = GetCollectable() (que devolvia a CAPACIDADE
@@ -263,14 +314,7 @@ namespace UCS.Logic
             //"cheio" para sempre, e o servidor creditava 150.000 onde o cliente tinha 100.
             int accumulated = (m_vProducedIndex >= 0 && m_vProducedIndex < m_vCurrentResources.Count)
                 ? m_vCurrentResources[m_vProducedIndex] : 0;
-            int remaining = 0;
-            if (m_vTimer != null)
-            {
-                remaining = m_vTimer.GetRemainingSeconds(GetParent().GetLevel().GetTime());
-                if (remaining < 0)
-                    remaining = 0;
-            }
-            resProd.Add("t", remaining);
+            resProd.Add("t", resTimeRemaining);
             resProd.Add("avail", accumulated);
             jsonObject.Add("res_prod", resProd);
             return jsonObject;
