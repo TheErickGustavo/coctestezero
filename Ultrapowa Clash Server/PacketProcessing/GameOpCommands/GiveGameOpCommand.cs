@@ -58,6 +58,8 @@ namespace UCS.PacketProcessing
                 if (m_vArgs.Length > 4) AddResource(ca, "Elixir", Convert.ToInt32(m_vArgs[4]));
                 if (m_vArgs.Length > 5) AddResource(ca, "DarkElixir", Convert.ToInt32(m_vArgs[5]));
 
+                SendCommandSuccessMessage(level.GetClient(), "Dadas " + gems + " gemas para " + ca.GetAvatarName() +
+                    " (total " + ca.GetDiamonds() + ")");
                 Debugger.WriteLine("Give: " + ca.GetAvatarName() + " (id " + id + ") +" + gems + " gemas, " +
                     "ouro=" + ca.GetResourceCount(ObjectManager.DataTables.GetResourceByName("Gold")) +
                     ", elixir=" + ca.GetResourceCount(ObjectManager.DataTables.GetResourceByName("Elixir")) +

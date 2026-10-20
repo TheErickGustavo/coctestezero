@@ -219,6 +219,40 @@ namespace UCS.Logic
             }
         }
 
+        //R-C5: ativa o heroi (Rei/Rainha) para ele aparecer na tela de ataque.
+        //So faz isso se a VILA TEM o altar do heroi: numa vila sem altar o cliente
+        //7.65 crasha com SIGSEGV ao tentar desenhar o heroi.
+        public void ActivateHeroes(Level level)
+        {
+            try
+            {
+                for (int i = 0; i < 2; i++)
+                {
+                    HeroData hd = ObjectManager.DataTables.GetDataById(28000000 + i) as HeroData;
+                    if (hd == null)
+                        continue;
+                    int altarId = 1000022 + i;   //1000022 = Altar do Rei, 1000025 = Altar da Rainha
+                    if (level == null || AllianceTroopService.FindBuilding(level, altarId) == null)
+                        continue;
+                    int lvl = GetUnitUpgradeLevel(hd);
+                    int hp = 0;
+                    if (hd.Hitpoints != null && hd.Hitpoints.Count > 0)
+                    {
+                        int idx = lvl > 0 && lvl < hd.Hitpoints.Count ? lvl : 0;
+                        hp = hd.Hitpoints[idx];
+                    }
+                    if (hp <= 0)
+                        continue;
+                    SetHeroHealth(hd, hp);
+                    SetHeroState(hd, 0);   //0 = no altar (disponivel para atacar)
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[UCS] R-C5: erro ao ativar herois: " + ex.Message);
+            }
+        }
+
         public void SetHeroState(HeroData hd, int state)
         {
             int index = GetDataIndex(m_vHeroState, hd);
