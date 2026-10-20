@@ -162,6 +162,24 @@ namespace UCS.PacketProcessing
             }
 
             level = ResourcesManager.GetPlayer(m_vAccountId);
+            if (level == null)
+            {
+                //R-C5: conta nova -> cria a vila padrao (gamefiles/default/home.json),
+                //igual o CoC real. Antes o login estourava (level null).
+                try
+                {
+                    level = ObjectManager.CreateAvatar(m_vAccountId);
+                    Console.WriteLine("[UCS] R-C5: conta nova criada id=" + m_vAccountId);
+                }
+                catch (Exception createEx)
+                {
+                    Console.WriteLine("[UCS] R-C5: falha ao criar conta " + m_vAccountId + ": " + createEx.Message);
+                    var pf = new LoginFailedMessage(this.Client);
+                    pf.SetErrorCode(10);
+                    PacketManager.ProcessOutgoingPacket(pf);
+                    return;
+                }
+            }
             if(level != null)
             {
                 if(level.GetAccountStatus() == 99)
