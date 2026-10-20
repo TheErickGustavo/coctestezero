@@ -272,6 +272,11 @@ namespace UCS.Logic
 
         public override JObject Save(JObject jsonObject)
         {
+            //R-C5: o cliente 7.65 so espera "res_prod" nos COLETORES. O res_prod em
+            //outros predios (ex.: Town Hall, que tem MaxStoredGold=1000) fazia o
+            //cliente 7.65 crashar com SIGSEGV ao abrir a vila.
+            if (m_vProducedIndex < 0)
+                return jsonObject;
             JObject resProd = new JObject();
             //R-C6: "avail" e o ACUMULADO real do coletor e "t" o tempo que falta para
             //encher. Antes gravava avail = GetCollectable() (que devolvia a CAPACIDADE

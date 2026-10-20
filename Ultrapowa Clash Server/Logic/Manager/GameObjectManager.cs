@@ -183,7 +183,6 @@ namespace UCS.Logic
             if (jsonRespawn["respawnSeed"] == null)
                 jsonRespawn.Add("respawnSeed", RespawnSeed);
             jsonData.Add("respawnVars", jsonRespawn);
-            jsonData.Add("exp_ver", m_vExpVer);
             jsonData.Add("last_league_rank", 0);
             jsonData.Add("last_league_shuffle", 150);
 

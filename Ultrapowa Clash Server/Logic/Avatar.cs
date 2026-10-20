@@ -234,12 +234,11 @@ namespace UCS.Logic
                     //(vila inicial do tutorial) o cliente 7.65 crasha com SIGSEGV no
                     //GLThread ao tentar desenhar o heroi.
                     int altarId = 1000022 + i;   //1000022 = Altar do Rei, 1000025 = Altar da Rainha
+                    //sem altar: NAO mexe no heroi. Adicionar slot de heroi (mesmo com
+                    //health 0) fazia o cliente 7.65 tentar desenhar o heroi e crashing
+                    //com SIGSEGV no GLThread (vila inicial do tutorial).
                     if (level == null || AllianceTroopService.FindBuilding(level, altarId) == null)
-                    {
-                        SetHeroHealth(hd, 0);
-                        SetHeroState(hd, 0);
                         continue;
-                    }
                     int lvl = GetUnitUpgradeLevel(hd);
                     int hp = 0;
                     if (hd.Hitpoints != null && hd.Hitpoints.Count > 0)
