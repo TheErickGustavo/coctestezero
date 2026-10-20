@@ -300,12 +300,15 @@ namespace UCS.Logic
                     UnitStorageComponent storage = components[i] as UnitStorageComponent;
                     if (storage == null)
                         continue;
-                    //R-C5: o castelo do cla (data 1000143) guarda as tropas DOADAS/pedidas:
-                    //elas NAO fazem parte do exercito do jogador (o AddDonatedUnit tambem
-                    //nao mexe no contador do avatar). Incluir aqui contaminaria o avatar.
+                    //R-C5: o CASTELO DO CLA (data 1000014) guarda as tropas DOADAS: elas
+                    //nao fazem parte do exercito do jogador (nao ocupam o acampamento
+                    //nem aparecem na barra de ataque como tropa normal - no CoC elas
+                    //saem do icone do escudo do cla). Antes o codigo excluia 1000143
+                    //(que nao existe nesta versao), entao a tropa doada aparecia como
+                    //se estivesse no acampamento.
                     Building sb = storage.GetParent() as Building;
                     if (sb != null && sb.GetBuildingData() != null &&
-                        sb.GetBuildingData().GetGlobalID() == 1000143)
+                        sb.GetBuildingData().GetGlobalID() == AllianceTroopService.CastleBuildingId)
                         continue;
                     if (storage.IsSpellForge)
                         continue;
