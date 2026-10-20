@@ -264,9 +264,10 @@ namespace UCS.Logic
                     //Entao 0 = heroi disponivel na hora (e o cliente para de pedir revive
                     //com gemas a cada tela de ataque).
                     SetHeroHealth(hd, 0);
-                    //state 0 = heroi na vila (1=em upgrade, 2=?, 3=acabou de subir).
-                    //O 2 fazia o heroi ficar sempre deitado, entao voltou para 0.
-                    SetHeroState(hd, 0);
+                    //R-C5: state = 3 (o proprio codigo do UCS usa 3 no FinishUpgrading =
+                    //"heroi pronto/disponivel"). Testado: 0 deixa o heroi em pe mas ele
+                    //NAO aparece na barra de ataque; 2 deixa o heroi deitado.
+                    SetHeroState(hd, 3);
                 }
             }
             catch (Exception ex)

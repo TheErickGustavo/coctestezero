@@ -7,6 +7,8 @@ using System.Collections.Concurrent;
 using System.IO;
 using Newtonsoft.Json;
 using UCS.Logic;
+using UCS.GameFiles;
+using UCS.Core;
 using Ionic.Zlib;
 
 namespace UCS.PacketProcessing
@@ -44,6 +46,27 @@ namespace UCS.PacketProcessing
             data.AddRange(ch.Encode());
             data.AddRange(m_vOwnerLevel.GetPlayerAvatar().Encode());
 
+            //R-C5: log do que o cliente recebe (heroi + tropas do cla) - diagnostico
+            //de por que o heroi/castelo do cla nao aparecem na tela de ataque.
+            try
+            {
+                ClientAvatar va = m_vVisitorLevel.GetPlayerAvatar();
+                System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                sb.Append("[UCS] R-C5 24107 atacante " + va.GetId() + ": ");
+                for (int hi = 0; hi < 2; hi++)
+                {
+                    HeroData hd = ObjectManager.DataTables.GetDataById(28000000 + hi) as HeroData;
+                    if (hd == null)
+                        continue;
+                    sb.Append(hd.GetName() + ":hp=" + va.GetHeroHealth(hd) + ",st=" +
+                        va.GetHeroState(hd) + ",lvl=" + va.GetUnitUpgradeLevel(hd) + " ");
+                }
+                sb.Append("| unidades=");
+                foreach (var u in va.GetUnits())
+                    sb.Append(u.Data.GetName() + ":" + u.Value + " ");
+                Console.WriteLine(sb.ToString());
+            }
+            catch { }
             data.AddRange(m_vVisitorLevel.GetPlayerAvatar().Encode());
 
             data.AddRange(new byte[] { 0x00, 0x00, 0x00, 0x03, 0x00 });
