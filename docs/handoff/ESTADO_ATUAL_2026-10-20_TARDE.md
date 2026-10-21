@@ -238,3 +238,45 @@ do usuário). O nosso servidor é da geração v8 (UCS 0.6.1, 2016) — foi feit
 ele. Migrar o client (patch do `libg.so` do APK v8 para apontar ao 127.0.0.1:9341,
 como o `scripts/build-apk.py` faz no 7.65) é o caminho natural, mas exige portar o
 servidor para o layout de avatar do v8 (4 campos a mais + `hero_modes`).
+
+---
+
+## 7. LABORATÓRIO v8 (21/10) — como o v8 se conecta e o que falta
+
+**O que se descobriu:**
+- Os apps do celular "Clash v8 client" e "Clash v8 server" são o **mesmo APK**
+  (CoC **8.67.8**, versionCode 716) com packages/nomes diferentes.
+- O "Clash v8 server" é o **MAGIC-SERVER**: um servidor de CoC **embutido no app**
+  (logcat: `MAGIC-SERVER: server is listening at 127.0.0.1:9339`).
+- O `.so` do client aponta para `clashofclansgamea.kunlun.com:9339`
+  (strings: `clashofclansgamea.kunlun.com\0 gamea.clashofclans.com\0 9339\0`).
+- O **frame** do protocolo v8 é `[i32 len][i16 nonce][i16 id][dados]`
+  (captura: `27 75 00 00 | f1 00 | 07 02 | ...` → len=0x2775=10101=LoginMessage).
+- O nosso `Gateway.cs` é **idêntico ao UCS 0.6.1 original** (só a porta: 9340 vs 9339)
+  → **o nosso servidor JÁ é um servidor v8**.
+
+**O BLOQUEIO:** o client v8 manda o **login criptografado** com a chave pública do
+servidor da Supercell **da geração 8.x** — diferente da que o nosso `Client.cs`
+tem hardcoded (`m_vEnDecryptKey`, 251 bytes, a do 7.65). Por isso o `Decrypt` do
+servidor devolve lixo e o `accountId` vem inválido.
+
+**Ferramentas prontas (versionadas):**
+- `scripts/build-apk-v8.py` — patcha um APK v8 (host → 127.0.0.1, porta 9339→N) e assina.
+  APK originais guardados em `downloads/clash-v8-{client,server}.apk`.
+- `scripts/proxy-v8.py` — proxy/sniffer (PC) entre o client v8 e o magic-server:
+  ```
+  adb forward  tcp:9339 tcp:9339      # magic-server (celular) -> PC:9339
+  adb reverse tcp:9338 tcp:9342      # client v8 (celular)     -> PC:9342 (proxy)
+  python3 scripts/proxy-v8.py 9342 9339
+  ```
+  Captura em `/tmp/opencode/v8/captura-v8.bin` (já temos o handshake + o 24101 do
+  magic-server).
+
+**Próximo passo:** achar a chave pública do v8 (no `classes.dex` do app? no código
+nativo do magic? no handshake do magic?) e colocá-la no `m_vEnDecryptKey` do
+`Client.cs` — aí o v8 decodifica o login e a gente finalmente vê o **avatar v8 com o
+castelo do clã** (o formato exato que o 7.65 não tem).
+
+**No 7.65, o que ficou resolvido e validado (P-1):** castelo do DEFENSOR com
+tropas doadas na tela de ataque, tropas doadas fora do acampamento, tropas
+treinadas fora do castelo, apagar do castelo (Unknown1=1) e ids de tropa reais.

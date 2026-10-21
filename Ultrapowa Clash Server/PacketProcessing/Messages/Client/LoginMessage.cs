@@ -42,6 +42,15 @@ namespace UCS.PacketProcessing
 
         public override void Decode()
         {
+            try
+            {
+                byte[] raw = GetData();
+                string hex = "";
+                for (int i = 0; i < Math.Min(raw.Length, 200); i++)
+                    hex += raw[i].ToString("X2") + " ";
+                Console.WriteLine("[UCS] R-C8 login payload (" + raw.Length + " bytes): " + hex);
+            }
+            catch { }
             using (var br = new BinaryReader(new MemoryStream(GetData())))
             {
                 m_vAccountId = br.ReadInt64WithEndianSafe();
@@ -164,6 +173,15 @@ namespace UCS.PacketProcessing
             //(LoginOk). Depois de limpar os dados ele ficou preso na conta nova (id 25),
             //cuja vila inicial crasha o cliente (crash do tutorial, ja documentado).
             //Com DefaultAccountId > 0 o login SEMPRE cai na conta principal.
+            //R-C8: se o accountId lido for invalido (o client v8 tem outro layout de
+            //login e os campos ficam com lixo), usa a conta padrao - evita carregar e
+            //SALVAR a conta errada.
+            if (m_vAccountId <= 0 || m_vAccountId > 1000000)
+            {
+                Console.WriteLine("[UCS] R-C8: accountId invalido (" + m_vAccountId +
+                    ") -> conta padrao " + ObjectManager.DefaultAccountId);
+                m_vAccountId = ObjectManager.DefaultAccountId;
+            }
             if (ObjectManager.DefaultAccountId > 0)
             {
                 if (m_vAccountId != ObjectManager.DefaultAccountId)
