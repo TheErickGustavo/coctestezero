@@ -205,10 +205,19 @@ namespace UCS.Logic
                 UnitStorageComponent st = storages[i] as UnitStorageComponent;
                 if (st == null || st.IsSpellForge)
                     continue;
-                if (!st.CanAddUnit(cd))
-                    continue;
                 GameObject go = st.GetParent();
                 if (go == null)
+                    continue;
+                //R-T7: o CASTELO DO CLA tambem e um storage de tropas, mas as tropas
+                //TREINADAS nunca podem parar la (so as doadas). Como a busca e por
+                //PROXIMIDADE, o castelo (que fica perto do quartel) recebia as tropas
+                //do jogador - elas sumiam do acampamento e apareciam no castelo (e o
+                //castelo enchia, '-15 de espaco' no acampamento).
+                Building stb = go as Building;
+                if (stb != null && stb.GetBuildingData() != null &&
+                    stb.GetBuildingData().GetGlobalID() == AllianceTroopService.CastleBuildingId)
+                    continue;
+                if (!st.CanAddUnit(cd))
                     continue;
                 double distance = (from - go.GetPosition()).LengthSquared;
                 if (distance < bestDistance)
