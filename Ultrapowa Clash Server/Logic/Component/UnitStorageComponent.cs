@@ -352,7 +352,9 @@ namespace UCS.Logic
                         //reconhece esse id (o GetGlobalID() do servidor devolve ids
                         //deslocados por causa do "count" parcial do DataTable).
                         CharacterData baseType = GetBaseType(cd);
-                        int id = baseType != null ? baseType.GetGlobalID() : cd.GetGlobalID();
+                        int id = baseType != null
+                            ? DataSlotUtil.GetClientGlobalId(baseType)
+                            : DataSlotUtil.GetClientGlobalId(cd);
                         if (totals.ContainsKey(id))
                             totals[id] += count;
                         else
