@@ -231,9 +231,17 @@ namespace UCS.Logic
             }
             if (removed > 0)
             {
-                ClientAvatar ca = GetParent().GetLevel().GetPlayerAvatar();
-                int unitCount = ca.GetUnitCount(cd);
-                ca.SetUnitCount(cd, Math.Max(0, unitCount - removed));
+                //R-T7: as tropas do CASTELO DO CLA nao fazem parte do exercito do
+                //jogador - apagar de la nao pode mexer no contador do avatar.
+                Building rb = GetParent() as Building;
+                bool isCastle = rb != null && rb.GetBuildingData() != null &&
+                    rb.GetBuildingData().GetGlobalID() == AllianceTroopService.CastleBuildingId;
+                if (!isCastle)
+                {
+                    ClientAvatar ca = GetParent().GetLevel().GetPlayerAvatar();
+                    int unitCount = ca.GetUnitCount(cd);
+                    ca.SetUnitCount(cd, Math.Max(0, unitCount - removed));
+                }
             }
         }
 
