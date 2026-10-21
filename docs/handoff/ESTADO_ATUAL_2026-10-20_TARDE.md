@@ -156,3 +156,47 @@ no `SyncAvatarUnitCounts`, no `SyncAllianceUnits` e no `TroopNameParser`.
   `alliance_castle_level/total_capacity/used_capacity` corretos.
 - No CoC 2015 os heróis são **Dragão (4000049) e Golem (4000073)**, não Rei/Rainha
   (esses são do CoC moderno). O client coloca o herói com **x = 0** e id **4000520**.
+
+---
+
+## 6. P-1 — CASTELO DO CLÃ (21/10) — RESOLVIDO PARCIALMENTE
+
+### Resolvido e validado pelo usuário ✅
+1. **Castelo do DEFENSOR com as tropas doadas aparece na tela de ataque** ✓
+2. **As tropas doadas NÃO aparecem no acampamento** (elas ficam "dentro" do castelo,
+   como no CoC real) — o `SyncAvatarUnitCounts` exclui o castelo **1000014**
+   (antes excluía 1000143, que não existe nesta versão).
+3. **As tropas TREINADAS não vão mais para o castelo** — o `ProductionCompleted`
+   entregava no storage de tropas mais **próximo** e o castelo (mais perto do quartel
+   que a casa) recebia as tropas do jogador (elas sumiam do acampamento e o castelo
+   enchia). Agora o castelo é ignorado nessa busca.
+4. **Apagar tropa do castelo** — o `RemoveUnitsCommand` (0x226) tem o campo
+   `Unknown1`: **0 = do acampamento, 1 = do castelo do clã** (confirmado no
+   `commands.log`: `00000000...` vs `00000001...`). O servidor agora respeita isso e
+   não mexe no contador do avatar quando apaga do castelo.
+5. **IDs de tropa reais** — o client 7.65 referencia as tropas pelo **índice do TIPO**
+   (gigante = 4000003, dragão = 4000008) e o servidor indexava o `characters.csv` por
+   **LINHA** (7 linhas por tipo). Criado o mapa linha↔tipo (`DataTable`), o
+   `GetDataById` e o `DataSlotUtil.GetClientGlobalId` usam o índice do tipo. Antes o
+   "dragão" virava "archer nível 2" e as comparações por instância falhavam (as
+   tropas atacadas **não eram consumidas**).
+6. Comando admin **`/castelo <id> <tropa> [qtd]`** (o client bloqueia doar para si
+   mesmo) e o chat do clã passou a delegar ao `GameOpCommandFactory` (`/give`,
+   `/account`).
+
+### Pendente: o ESCUDO/BRASÃO do CLÃ do ATACANTE na barra de ataque
+O servidor envia **tudo** que o protocolo tem (log do 24107):
+```
+claUnits=Archer:7(id=4000001) Dragon:1(id=4000008) | casteloLvl=6 cap=35/27
+```
+- `alliance_units` com os ids REAIS ✓, `alliance_castle_level/total_capacity/
+  used_capacity` ✓, o badge e o role do clã no avatar ✓ (formato do bloco do clã
+  validado byte-a-byte contra o capture `generated-24101-live-0558.bin`).
+- O sprite **`alliance_marker` existe no client 7.65** (`base-libg-lan.so` do APK) —
+  então a feature é desta versão.
+- **Hipóteses para investigar:** (a) o `storage_type` do castelo (no nosso código
+  `storage_type=1` significa "feitiaria" e o `Load` deriva o `IsSpellForge` dele —
+  no jogo real o feitiário tem `storage_type=1` e o castelo do clã talvez use outro
+  valor/flag); (b) algum campo do avatar que o client 7.65 exige para o slot do
+  clã; (c) o client precisa do PRÉDIO do castelo na sua vila com as tropas (o client
+  tem a vila em memória, mas o storage_type/ids podem estar errados).
