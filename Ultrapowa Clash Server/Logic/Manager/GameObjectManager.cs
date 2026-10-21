@@ -147,6 +147,22 @@ namespace UCS.Logic
             }
             jsonData.Add("buildings",jsonBuildingsArray);
 
+            //R-T7: campos que o CLIENTE 7.65 conhece (strings do binario) mas que nao
+            //existem no CSV 7.65 - eles ficam no save local dele. Sem informa-los o
+            //cliente nao sabe o nivel do castelo do cla nem a capacidade de tropas do
+            //cla em visita, e o slot do escudo do cla na barra de ataque nao aparecia.
+            ClientAvatar pav = m_vLevel != null ? m_vLevel.GetPlayerAvatar() : null;
+            if (pav != null)
+            {
+                jsonData["castle_lvl"] = pav.GetAllianceCastleLevel();
+                jsonData["castle_total"] = pav.GetAllianceCastleTotalCapacity();
+                jsonData["castle_used"] = pav.GetAllianceCastleUsedCapacity();
+                jsonData["alliance_unit_visit_capacity"] = pav.GetAllianceCastleTotalCapacity();
+                jsonData["alliance_exp_level"] = 1;
+                jsonData["badge_id"] = 0;
+                jsonData["town_hall_lvl"] = pav.GetAvatarLevel();
+            }
+
             //Traps
             JArray jsonTrapsArray = new JArray();
             foreach (var go in m_vGameObjects[4])

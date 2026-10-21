@@ -301,6 +301,15 @@ namespace UCS.Logic
             jsonData.Add("alliance_castle_level", GetAllianceCastleLevel());
             jsonData.Add("alliance_castle_total_capacity", GetAllianceCastleTotalCapacity());
             jsonData.Add("alliance_castle_used_capacity", GetAllianceCastleUsedCapacity());
+            //R-T7: nomes que o CLIENTE 7.65 usa no save local (castle_lvl/castle_total/
+            //castle_used/alliance_unit_visit_capacity/alliance_exp_level/badge_id).
+            jsonData.Add("castle_lvl", GetAllianceCastleLevel());
+            jsonData.Add("castle_total", GetAllianceCastleTotalCapacity());
+            jsonData.Add("castle_used", GetAllianceCastleUsedCapacity());
+            jsonData.Add("alliance_unit_visit_capacity", GetAllianceCastleTotalCapacity());
+            jsonData.Add("alliance_exp_level", 1);
+            jsonData.Add("badge_id", 0);
+            jsonData.Add("town_hall_lvl", GetAvatarLevel());
             jsonData.Add("townhall_level", GetTownHallLevel());
             jsonData.Add("avatar_name", m_vAvatarName);
             jsonData.Add("avatar_level", m_vAvatarLevel);

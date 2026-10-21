@@ -200,3 +200,41 @@ claUnits=Archer:7(id=4000001) Dragon:1(id=4000008) | casteloLvl=6 cap=35/27
   valor/flag); (b) algum campo do avatar que o client 7.65 exige para o slot do
   clã; (c) o client precisa do PRÉDIO do castelo na sua vila com as tropas (o client
   tem a vila em memória, mas o storage_type/ids podem estar errados).
+
+### DIAGNÓSTICO FINAL DO ESCUDO DO CLÃ (21/10) — via binário do client
+
+Ferramenta: `strings` no `base-libg-lan.so` (client 7.65) e no `libg.so` do APK
+**CoC v8** extraído do celular (`com.supercell.clashofclans.v8.client`).
+
+Os dois clients conhecem os mesmos campos de avatar:
+```
+avatar_id_high, avatar_id_low, badge_id, alliance_exp_level,
+alliance_unit_visit_capacity, league_type, resources, alliance_units,
+hero_states, hero_health, hero_upgrade, castle_lvl, castle_total, castle_used,
+town_hall_lvl, red_package_state, unit_upgrades, spell_upgrades
+```
+O **v8 tem 4 campos a mais**: `alliance_unit_spell_visit_capacity`, `hero_modes`,
+`castle_total_sp`, `castle_used_sp` → **o layout do avatar do v8 é DIFERENTE do 7.65**.
+
+achados:
+- `castle_lvl`/`castle_total`/`castle_used`/`alliance_unit_visit_capacity`/
+  `alliance_exp_level`/`badge_id` **não existem no CSV do 7.65 nem do v8** → são
+  campos do **save local do client**, não do protocolo binário (o capture real do
+  7.65 `generated-24101-live-0558.bin` não os tem no avatar binário).
+  → o client 7.65 **não tem como saber** o nível do castelo do clã vindo do servidor.
+- O `assets/level/starting_home.json` do **v8** tem **exatamente o mesmo formato**
+  do nosso (buildings/decos/exp_ver/obstacles/respawnVars/traps, castelo com
+  `"locked": true`) → o formato da VILA está correto (os `mode`/`l2x`/`l6x` que
+  existem nos ALL_LEVELS são de v9+).
+- O `alliance_marker` (sprite do escudo) existe nos dois clients.
+
+**Conclusão:** o "escudo/brisao do clã do ATACANTE na barra de ataque" é uma feature
+de **versões posteriores** (o 7.65 é de 2015 e o protocolo dele não tem como
+informar o castelo do clã ao client). O que o 7.65 tem e que **JÁ FUNCIONA**:
+o **castelo do DEFENSOR** com as tropas doadas na tela de ataque.
+
+**=> O caminho para ter essa feature é o client v8** (2016, já instalado no celular
+do usuário). O nosso servidor é da geração v8 (UCS 0.6.1, 2016) — foi feito para
+ele. Migrar o client (patch do `libg.so` do APK v8 para apontar ao 127.0.0.1:9341,
+como o `scripts/build-apk.py` faz no 7.65) é o caminho natural, mas exige portar o
+servidor para o layout de avatar do v8 (4 campos a mais + `hero_modes`).
