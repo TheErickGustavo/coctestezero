@@ -41,6 +41,12 @@ namespace UCS.PacketProcessing
 
         public override void Execute(Level level)
         {
+            //R-T7: o Unknown1 deste comando indica DE ONDE remover. Com 1 o cliente
+            //7.65 esta apagando tropa do CASTELO DO CLA (o "X" no castelo) - antes o
+            //servidor varria os storages e removia do PRIMEIRO que tivesse a tropa
+            //(o acampamento), entao as tropas do castelo "voltavam" a cada ida/volta
+            //e o acampamento perdia tropas a cada vez.
+            bool fromCastle = Unknown1 == 1;
             foreach(var unit in UnitsToRemove)
             {
                 List<Component> components = level.GetComponentManager().GetComponents(0);
@@ -52,6 +58,15 @@ namespace UCS.PacketProcessing
                         var storageCount = c.GetUnitCountByData(unit.Data);
                         if(storageCount >= unit.Count)
                         {
+                            Building sb = c.GetParent() as Building;
+                            bool isCastle = sb != null && sb.GetBuildingData() != null &&
+                                sb.GetBuildingData().GetGlobalID() == AllianceTroopService.CastleBuildingId;
+                            //so remove do castelo se foi ele que o cliente pediu
+                            if (fromCastle != isCastle)
+                                continue;
+                            Debugger.WriteLine("[UCS] R-T7: RemoveUnits " + unit.Count + "x " +
+                                unit.Data.GetName() + " de " + (isCastle ? "CASTELO DO CLA" : "acampamento") +
+                                " (unknown1=" + Unknown1 + ")");
                             c.RemoveUnits(unit.Data, unit.Count);
                             break;
                         }

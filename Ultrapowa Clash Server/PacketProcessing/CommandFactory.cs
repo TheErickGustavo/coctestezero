@@ -77,7 +77,7 @@ namespace UCS.PacketProcessing
             {
                 long pos = br.BaseStream.Position;
                 long remaining = br.BaseStream.Length - pos;
-                byte[] peek = remaining > 0 ? br.ReadBytes((int)Math.Min(remaining, 16)) : new byte[0];
+                byte[] peek = remaining > 0 ? br.ReadBytes((int)Math.Min(remaining, 40)) : new byte[0];
                 if (br.BaseStream.CanSeek)
                     br.BaseStream.Position = pos;
                 string hex = BitConverter.ToString(peek).Replace("-", "");

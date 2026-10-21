@@ -371,7 +371,10 @@ namespace UCS.Logic
                 {
                     if (ds.Data == null)
                         continue;
-                    int gid = ds.Data.GetGlobalID();
+                    //R-T7: o id do cliente (indice do TIPO) - o GetGlobalID() usava a
+                    //LINHA do CSV e nunca batia com o total, entao o contador do avatar
+                    //nunca era corrigido.
+                    int gid = DataSlotUtil.GetClientGlobalId(ds.Data);
                     if (totals.ContainsKey(gid))
                     {
                         if (ds.Value != totals[gid])

@@ -40,6 +40,16 @@ namespace UCS.GameFiles
         {
             int classId = GlobalID.GetClassID(id) - 1;
             DataTable dt = m_vDataTables[classId];
+            //R-T7: o cliente 7.65 referencia as tropas pelo indice do TIPO (gigante =
+            //4000003, dragao = 4000008), nao pela linha do CSV (gigante = 4000020).
+            //O servidor guardava a tropa errada (e o "dragao" virava archer nivel 2).
+            int typeIndex = GlobalID.GetInstanceID(id);
+            if (typeIndex >= 0)
+            {
+                Data byType = dt.GetItemByTypeIndex(typeIndex);
+                if (byType != null)
+                    return byType;
+            }
             return dt.GetItemById(id);
         }
 

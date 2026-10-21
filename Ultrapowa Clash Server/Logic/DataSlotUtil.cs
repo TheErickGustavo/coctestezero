@@ -21,9 +21,11 @@ namespace UCS.Logic
                 DataTable dt = ObjectManager.DataTables.GetTable(data.GetDataType());
                 if (dt != null)
                 {
-                    int idx = dt.GetItemIndex(data);
-                    if (idx >= 0)
-                        return GlobalID.CreateGlobalID(dt.GetTableIndex() + 1, idx);
+                    //R-T7: indice do TIPO (a ordem dos tipos no CSV) - e o que o
+                    //cliente 7.65 usa (gigante = 4000003, dragao = 4000008).
+                    int typeIndex = dt.GetTypeIndexOf(data);
+                    if (typeIndex >= 0)
+                        return GlobalID.CreateGlobalID(dt.GetTableIndex() + 1, typeIndex);
                 }
             }
             catch { }
