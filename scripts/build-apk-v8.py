@@ -39,15 +39,16 @@ ROOT = "/home/eg/Downloads/coctestezero/server"
 WORK = os.path.join(ROOT, "apk-work")
 BT = "/home/eg/Downloads/coc-2015-lab/tools/bt/android-14"
 JDK = "/home/eg/Downloads/coc-2015-lab/tools/jdk"
-SRC = "/home/eg/Downloads/coctestezero/downloads/clash-v8-server.apk"
-UNSIGNED = os.path.join(WORK, "clash-v8-server-unsigned.apk")
-ALIGNED = os.path.join(WORK, "clash-v8-server-aligned.apk")
-OUT = "/home/eg/Downloads/coctestezero/clash-v8-server.apk"
+SRC = sys.argv[1] if len(sys.argv) > 1 else "/home/eg/Downloads/coctestezero/downloads/clash-v8-server.apk"
+TAG = os.path.splitext(os.path.basename(SRC))[0]
+UNSIGNED = os.path.join(WORK, TAG + "-unsigned.apk")
+ALIGNED = os.path.join(WORK, TAG + "-aligned.apk")
+OUT = os.path.join(WORK, TAG + "-patched.apk")
 
 HOSTS = [b"clashofclansgamea.kunlun.com", b"gamea.clashofclans.com"]
 NEW_HOST = b"127.0.0.1"
-PORT_OLD = b"9339"
-PORT_NEW = b"9341"
+PORT_OLD = os.environ.get("V8_PORT_OLD", "9339").encode()
+PORT_NEW = os.environ.get("V8_PORT_NEW", "9341").encode()
 
 
 def patch_so(data):

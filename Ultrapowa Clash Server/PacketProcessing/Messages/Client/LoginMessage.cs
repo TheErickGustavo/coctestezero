@@ -149,11 +149,10 @@ namespace UCS.PacketProcessing
             {
                 if(m_vClientMajorVersion != Convert.ToInt32(versionData[0]) || m_vClientBuild != Convert.ToInt32(versionData[1]))
                 {
-                    var p = new LoginFailedMessage(this.Client);
-                    p.SetErrorCode(8);
-                    p.SetUpdateURL("market://details?id=com.supercell.clashofclans");
-                    PacketManager.ProcessOutgoingPacket(p);
-                    return;
+                    //R-C8: servidor PRIVADO - nao recusa outras versoes (o client v8
+                    //8.67.8 e usado para comparar o castelo do cla). So avisa no log.
+                    Console.WriteLine("[UCS] R-C8: versao do client " + m_vClientMajorVersion + "." +
+                        m_vClientBuild + " (esperado " + versionData[0] + "." + versionData[1] + ") - aceito (servidor privado)");
                 }
             }
             else
