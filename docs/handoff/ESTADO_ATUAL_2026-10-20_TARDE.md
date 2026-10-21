@@ -134,3 +134,25 @@ moderno). O client coloca o herói com **x = 0** e o id global **4000520**.
 - **P-3** custo de 75 de ouro por ataque (por liga).
 - **P-4** % de destruição / loot / vitória (simulação, precisa de calibração).
 - **P-5** vila inicial (tutorial) crasha.
+
+###(ids de tropa: o "count" parcial do UCS)
+`Data.GetGlobalID()` usa `CreateGlobalID(tableIndex+1, dt.GetItemCount())` e o
+`GetItemCount()` do DataTable é um **contador parcial**: os ids saíam **deslocados**
+(Dragon = 4000006, Archer = 4000008...). O cliente 7.65 **ignora ids que não
+conhece**, então:
+- o castelo do clã gravava 4000008 → o `alliance_units` não era reconhecido;
+- o alias "dragão" do `TroopNameParser` apontava para 4000006 → `GetDataById`
+  devolvia a **linha 6** (bárbaro nível 7) → a doação entregava a tropa errada;
+- o contador de tropas do avatar ficava com ids inválidos.
+**Correção:** `DataSlotUtil.GetClientGlobalId(data)` devolve o id **real**
+(`4000000 + índice da linha do CSV` = o id do jogo: Dragon 4000049, Archer 4000007,
+Goblin 4000014). Aplicado no `DataSlot.Save/Encode`, no `UnitStorageComponent.Save`,
+no `SyncAvatarUnitCounts`, no `SyncAllianceUnits` e no `TroopNameParser`.
+
+### Coisas que NÃO são bug (expectativa do CoC real)
+- No CoC 2015 o **castelo do clã do DEFENSOR** aparece na tela de ataque (✅ já
+  funciona, com as tropas doadas). O **castelo do ATACANTE** (o escudo do clã na
+  barra) é o que ainda não aparece — o servidor envia `alliance_units`,
+  `alliance_castle_level/total_capacity/used_capacity` corretos.
+- No CoC 2015 os heróis são **Dragão (4000049) e Golem (4000073)**, não Rei/Rainha
+  (esses são do CoC moderno). O client coloca o herói com **x = 0** e id **4000520**.
