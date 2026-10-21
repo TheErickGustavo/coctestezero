@@ -123,6 +123,26 @@ namespace UCS.Logic
                 //nos comandos (ex.: 0x1DCD654B) sao esses mesmos.
                 jsonObject.Add("id", b.GlobalId);
                 b.Save(jsonObject);
+                //R-T7: o castelo do cla e os altares de heroi recebem, no jogo 7.65, o
+                //campo "mode" e as posicoes l1x/l1y, l2x/l2y, l6x/l6y (a posicao do
+                //predio em cada nivel/modo). Sem eles o cliente 7.65 nao desenhava o
+                //slot do escudo do cla na barra de ataque.
+                //Exemplo real (ALL_LEVELS v7.65): {"data":1000014,"id":500000004,
+                //"lvl":0,"x":24,"y":19,"mode":0,"l2x":24,"l2y":19,"l6x":24,"l6y":19}
+                int bid = b.GetBuildingData().GetGlobalID();
+                if (bid == 1000014)   //castelo do cla
+                {
+                    jsonObject["mode"] = 0;
+                }
+                if (bid == 1000014 || bid == 1000022 || bid == 1000025) //castelo/altares
+                {
+                    jsonObject["l1x"] = b.X;
+                    jsonObject["l1y"] = b.Y;
+                    jsonObject["l2x"] = b.X;
+                    jsonObject["l2y"] = b.Y;
+                    jsonObject["l6x"] = b.X;
+                    jsonObject["l6y"] = b.Y;
+                }
                 jsonBuildingsArray.Add(jsonObject);
             }
             jsonData.Add("buildings",jsonBuildingsArray);
