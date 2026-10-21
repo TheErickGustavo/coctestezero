@@ -102,6 +102,20 @@ namespace UCS.Logic
                 return null;
             try
             {
+                //R-T7: resolve pelo indice do TIPO (o nome so existe na 1a linha de cada
+                //tipo no characters.csv - as linhas de nivel tem nome VAZIO, entao o
+                //GetCharacterByName("") devolvia null).
+                DataTable dt = ObjectManager.DataTables.GetTable(3);
+                if (dt != null)
+                {
+                    int typeIndex = dt.GetTypeIndexOf(cd);
+                    if (typeIndex >= 0)
+                    {
+                        CharacterData byType = dt.GetItemByTypeIndex(typeIndex) as CharacterData;
+                        if (byType != null)
+                            return byType;
+                    }
+                }
                 return ObjectManager.DataTables.GetCharacterByName(cd.GetName());
             }
             catch { return null; }
