@@ -71,6 +71,52 @@ namespace UCS.Helpers
         //"Index was out of range" no meio do Decode (derrubava o login inteiro).
         //Aqui: se o comprimento nao couber no buffer, lemos o que sobrou; se falhar,
         //devolvemos string vazia (esses campos nao sao criticos para o servidor).
+        public static long ReadInt64WithEndianSafe(this BinaryReader br)
+        {
+            try
+            {
+                if (br.BaseStream.Length - br.BaseStream.Position < 8)
+                    return 0;
+                return br.ReadInt64WithEndian();
+            }
+            catch { return 0; }
+        }
+
+        public static uint ReadUInt32WithEndianSafe(this BinaryReader br)
+        {
+            try
+            {
+                if (br.BaseStream.Length - br.BaseStream.Position < 4)
+                    return 0;
+                return br.ReadUInt32WithEndian();
+            }
+            catch { return 0; }
+        }
+
+        //R-C8: leitura tolerante de int32/byte (o login do client v8 tem menos
+        //campos e o ReadInt32WithEndian original estourava no fim do buffer).
+        public static int ReadInt32WithEndianSafe(this BinaryReader br)
+        {
+            try
+            {
+                if (br.BaseStream.Length - br.BaseStream.Position < 4)
+                    return 0;
+                return br.ReadInt32WithEndian();
+            }
+            catch { return 0; }
+        }
+
+        public static byte ReadByteSafe(this BinaryReader br)
+        {
+            try
+            {
+                if (br.BaseStream.Length - br.BaseStream.Position < 1)
+                    return 0;
+                return br.ReadByte();
+            }
+            catch { return 0; }
+        }
+
         public static String ReadScStringSafe(this BinaryReader br)
         {
             try

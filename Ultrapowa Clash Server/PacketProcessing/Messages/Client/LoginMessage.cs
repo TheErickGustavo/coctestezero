@@ -44,33 +44,33 @@ namespace UCS.PacketProcessing
         {
             using (var br = new BinaryReader(new MemoryStream(GetData())))
             {
-                m_vAccountId = br.ReadInt64WithEndian();
+                m_vAccountId = br.ReadInt64WithEndianSafe();
                 m_vPassToken = br.ReadScStringSafe();
-                m_vClientMajorVersion = br.ReadInt32WithEndian();
-                m_vClientContentVersion = br.ReadInt32WithEndian();
-                m_vClientBuild = br.ReadInt32WithEndian();
+                m_vClientMajorVersion = br.ReadInt32WithEndianSafe();
+                m_vClientContentVersion = br.ReadInt32WithEndianSafe();
+                m_vClientBuild = br.ReadInt32WithEndianSafe();
                 m_vResourceSha = br.ReadScStringSafe();
                 m_vUDID = br.ReadScStringSafe();
                 m_vOpenUDID = br.ReadScStringSafe();
                 m_vMacAddress = br.ReadScStringSafe();
                 m_vDevice = br.ReadScStringSafe();
-                br.ReadInt32WithEndian();//00 1E 84 81, readDataReference for m_vPreferredLanguage
+                br.ReadInt32WithEndianSafe();//00 1E 84 81, readDataReference for m_vPreferredLanguage
                 m_vPreferredDeviceLanguage = br.ReadScStringSafe();
                 //unchecked
                 m_vPhoneId = br.ReadScStringSafe();
                 m_vGameVersion = br.ReadScStringSafe();
-                br.ReadByte();//01
-                br.ReadInt32WithEndian();//00 00 00 00
+                br.ReadByteSafe();//01
+                br.ReadInt32WithEndianSafe();//00 00 00 00
                 m_vSignature2 = br.ReadScStringSafe();
                 m_vSignature3 = br.ReadScStringSafe();
-                br.ReadByte();//01
+                br.ReadByteSafe();//01
                 m_vSignature4 = br.ReadScStringSafe();
-                m_vClientSeed = br.ReadUInt32WithEndian();
+                m_vClientSeed = br.ReadUInt32WithEndianSafe();
                 if(GetMessageVersion() >=7 )//7.156
                 {
-                    br.ReadByte();
-                    br.ReadUInt32WithEndian();
-                    br.ReadUInt32WithEndian();
+                    br.ReadByteSafe();
+                    br.ReadUInt32WithEndianSafe();
+                    br.ReadUInt32WithEndianSafe();
                 }
             }
         }
