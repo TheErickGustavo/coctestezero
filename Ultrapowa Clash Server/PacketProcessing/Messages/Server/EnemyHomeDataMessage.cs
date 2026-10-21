@@ -64,6 +64,11 @@ namespace UCS.PacketProcessing
                 sb.Append("| unidades=");
                 foreach (var u in va.GetUnits())
                     sb.Append(u.Data.GetName() + ":" + u.Value + " ");
+                sb.Append("| claUnits=");
+                foreach (var au in va.AllianceUnits)
+                    sb.Append(au.Data.GetName() + ":" + au.Value + "(id=" + au.Data.GetGlobalID() + ") ");
+                sb.Append("| casteloLvl=" + va.GetAllianceCastleLevel() +
+                    " cap=" + va.GetAllianceCastleTotalCapacity() + "/" + va.GetAllianceCastleUsedCapacity());
                 Console.WriteLine(sb.ToString());
             }
             catch { }
