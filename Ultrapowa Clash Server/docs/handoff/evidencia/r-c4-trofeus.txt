@@ -1,0 +1,165 @@
+# Evidência R-C4 (troféus PvP) - trechos do log do servidor
+# Fonte: ucs-zero.log (gerado em 2026-10-20 01:03:15)
+
+=== calibration do comando 603 (bin/Release/r-c4-603.log) ===
+13:39:05.687 attacker=1 defender=2 value=3824
+13:42:57.987 attacker=1 defender=2 value=7968
+14:21:06.852 attacker=1 defender=2 value=1004
+14:33:35.798 attacker=1 defender=2 value=693
+14:50:30.071 attacker=1 defender=2 value=5188
+15:07:49.700 attacker=1 defender=2 value=712
+
+=== linhas '[UCS] R-C4' (todos os resultados PvP) ===
+[UCS] R-C4: comando 603 recebido, value=2203, pendingPvP=True
+[UCS] R-C4: PvP finalizado attacker=1 defender=2 endValue=2203 outcome=win scores=4020/3980
+[UCS] R-C4: PvP finalizado attacker=2 defender=1 endValue=missing outcome=loss scores=3960/4040
+[UCS] R-C4: PvP finalizado attacker=2 defender=1 endValue=missing outcome=loss scores=3940/4060
+[UCS] R-C4: comando 603 recebido, value=792, pendingPvP=True
+[UCS] R-C4: PvP finalizado attacker=2 defender=1 endValue=792 outcome=win scores=3960/4040
+[UCS] R-C4: PvP finalizado attacker=2 defender=1 endValue=missing outcome=loss scores=3940/4060
+[UCS] R-C4: PvP finalizado attacker=2 defender=1 endValue=missing outcome=loss scores=3920/4080
+[UCS] R-C4: comando 603 recebido, value=212, pendingPvP=True
+[UCS] R-C4: PvP finalizado attacker=2 defender=1 endValue=212 outcome=loss scores=3900/4100
+[UCS] R-C4: PvP finalizado attacker=2 defender=1 endValue=missing outcome=loss scores=3880/4120
+[UCS] R-C4: comando 603 recebido, value=131, pendingPvP=True
+[UCS] R-C4: PvP finalizado attacker=2 defender=1 endValue=131 outcome=loss scores=3860/4140
+[UCS] R-C4: comando 603 recebido, value=159, pendingPvP=True
+[UCS] R-C4: PvP finalizado attacker=2 defender=1 endValue=159 outcome=loss scores=3840/4160
+[UCS] R-C4: comando 603 recebido, value=189, pendingPvP=True
+[UCS] R-C4: PvP finalizado attacker=2 defender=1 endValue=189 outcome=loss scores=3820/4180
+[UCS] R-C4: comando 603 recebido, value=178, pendingPvP=True
+[UCS] R-C4: PvP finalizado attacker=2 defender=1 endValue=178 outcome=loss scores=3800/4200
+[UCS] R-C4: comando 603 recebido, value=135, pendingPvP=True
+[UCS] R-C4: PvP finalizado attacker=2 defender=1 endValue=135 outcome=loss scores=3780/4220
+[UCS] R-C4: PvP finalizado attacker=1 defender=2 endValue=missing outcome=loss scores=4200/3800
+[UCS] R-C4: comando 603 recebido, value=10011, pendingPvP=True
+[UCS] R-C4: PvP finalizado attacker=1 defender=2 endValue=10011 outcome=win scores=4220/3780
+[UCS] R-C4: PvP finalizado attacker=1 defender=2 endValue=missing outcome=loss scores=4200/3800
+[UCS] R-C4: PvP finalizado attacker=1 defender=2 endValue=missing outcome=loss scores=4180/3820
+[UCS] R-C4: PvP finalizado attacker=1 defender=2 endValue=missing outcome=loss scores=4160/3840
+[UCS] R-C4: PvP finalizado attacker=1 defender=2 endValue=missing outcome=loss scores=4140/3860
+[UCS] R-C4: PvP finalizado attacker=1 defender=2 endValue=missing outcome=loss scores=4120/3880
+[UCS] R-C4: PvP finalizado attacker=1 defender=2 endValue=missing outcome=loss scores=4100/3900
+[UCS] R-C4: comando 603 recebido, value=2345, pendingPvP=True
+[UCS] R-C4: PvP finalizado attacker=1 defender=2 endValue=2345 outcome=win scores=4120/3880
+[UCS] R-C4: PvP finalizado attacker=1 defender=2 endValue=missing outcome=loss scores=4100/3900
+[UCS] R-C4: PvP finalizado attacker=1 defender=2 endValue=missing outcome=loss scores=4080/3920
+[UCS] R-C4: PvP finalizado attacker=1 defender=2 endValue=missing outcome=loss scores=4060/3940
+[UCS] R-C4: PvP finalizado attacker=1 defender=2 endValue=missing outcome=loss scores=4040/3960
+[UCS] R-C4: PvP finalizado attacker=1 defender=2 endValue=missing outcome=loss scores=4020/3980
+[UCS] R-C4: PvP finalizado attacker=1 defender=2 endValue=missing outcome=loss scores=4000/4000
+[UCS] R-C4: nenhum oponente PvP elegivel para avatar 1
+[UCS] R-C4: nenhum oponente PvP elegivel para avatar 1
+[UCS] R-C4: score do cla 2 recalculado para 4000
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: 13:39:05.687 comando 603 recebido, value=3824, pendingPvP=True
+[UCS] R-C4: PvP finalizado attacker=1 defender=2 endValue=3824 outcome=loss scores=3980/4020
+[UCS] R-C4: 13:42:57.987 comando 603 recebido, value=7968, pendingPvP=True
+[UCS] R-C4: PvP finalizado attacker=1 defender=2 endValue=7968 outcome=win scores=4000/4000
+[UCS] R-C4: nenhum oponente PvP elegivel para avatar 1
+[UCS] R-C4: nenhum oponente PvP elegivel para avatar 1
+[UCS] R-C4: score do cla 2 recalculado para 8000
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: 14:21:06.852 comando 603 recebido, value=1004, pendingPvP=True
+[UCS] R-C4: PvP finalizado attacker=1 defender=2 damagePoints=1004 hpTotalDefensor=91660 destrucao=1,10% outcome=loss delta=-20 scores=3980/4020
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: score do cla 2 recalculado para 3980
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: 14:33:35.798 comando 603 recebido, value=693, pendingPvP=True
+[UCS] R-C4: PvP finalizado attacker=1 defender=2 damagePoints=693 hpTotalDefensor=91660 destrucao=0,76% outcome=loss delta=-20 scores=3960/4040
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: 14:50:30.071 comando 603 recebido, value=5188, pendingPvP=True
+[UCS] R-C4: PvP finalizado attacker=1 defender=2 damagePoints=5188 hpTotalDefensor=91660 destrucao=5,66% outcome=loss delta=-19 scores=3941/4059
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: 15:07:49.700 comando 603 recebido, value=712, pendingPvP=True
+[UCS] R-C4: PvP finalizado attacker=1 defender=2 damagePoints=712 hpTotalDefensor=91660 destrucao=0,78% outcome=loss delta=-14 scores=3927/4073
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: score do cla 2 recalculado para 8000
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+[UCS] R-C4: sem 603 (sem combate) attacker=1 defender=2 -> resultado descartado, trofeus intactos
+
+=== comandos desconhecidos (client -> server) ===
+2026-10-19 07:45:26.376 cmd=603 len=4 hex=00000236
+2026-10-19 07:47:28.719 cmd=553 len=8 hex=0000000100001995
+2026-10-19 07:54:39.125 cmd=603 len=4 hex=00000115
+2026-10-19 08:30:26.964 cmd=603 len=4 hex=0000026F
+2026-10-19 08:32:06.283 cmd=603 len=4 hex=000002B3
+2026-10-19 08:34:21.135 cmd=553 len=8 hex=0000000100000093
+2026-10-19 08:48:45.314 cmd=553 len=8 hex=00000001000000E0
+2026-10-19 12:33:20.676 cmd=553 len=8 hex=0000000100000E70
+2026-10-19 12:36:06.487 cmd=553 len=8 hex=0000000100000B96
+2026-10-19 12:38:31.102 cmd=553 len=8 hex=0000000100002D79
+2026-10-19 12:38:35.142 cmd=553 len=8 hex=0000000100002E6B
+2026-10-19 12:39:27.785 cmd=553 len=8 hex=0000000100003AC2
+2026-10-19 12:40:20.928 cmd=553 len=8 hex=00000001000006AE
+2026-10-19 12:42:18.654 cmd=553 len=8 hex=0000000100002246
+2026-10-19 12:43:58.635 cmd=553 len=8 hex=00000001000039B2
+2026-10-19 12:45:57.130 cmd=553 len=8 hex=000000010000009E
+2026-10-19 12:47:24.636 cmd=553 len=8 hex=000000010000005F
+2026-10-19 12:47:36.262 cmd=553 len=8 hex=000000010000012C
+2026-10-19 12:48:29.786 cmd=553 len=8 hex=0000000100000782
+2026-10-19 12:51:31.089 cmd=553 len=8 hex=00000001000000E1
+2026-10-19 12:51:44.933 cmd=553 len=8 hex=000000010000041F
+2026-10-19 12:52:02.178 cmd=553 len=8 hex=0000000100000057
+2026-10-19 12:53:04.914 cmd=553 len=8 hex=00000001000000B2
+2026-10-19 12:53:37.776 cmd=553 len=8 hex=0000000100000866
+2026-10-19 12:53:55.086 cmd=553 len=8 hex=0000000100000C74
+2026-10-19 12:54:12.343 cmd=553 len=8 hex=0000000100001080
+2026-10-19 12:54:17.228 cmd=553 len=8 hex=00000001000011A4
+2026-10-19 12:54:22.331 cmd=553 len=8 hex=00000001000012D7
+2026-10-19 12:54:29.880 cmd=553 len=8 hex=000000010000149C
+2026-10-19 12:55:27.155 cmd=553 len=8 hex=0000000100002209
+2026-10-19 12:56:50.806 cmd=553 len=8 hex=00000001000035A3
+2026-10-19 12:57:35.424 cmd=541 len=4 hex=00004018
+2026-10-19 12:57:40.664 cmd=540 len=14 hex=0000000664726167616F00004152
+2026-10-19 13:02:33.249 cmd=541 len=46 hex=00003C86000001FF00003CB0010000001D5072656369736F2064652074726F706173206465207265666F72C3A76F
+2026-10-19 13:02:39.223 cmd=541 len=4 hex=00003E17
+2026-10-19 13:02:43.699 cmd=540 len=12 hex=000000046472616700003F23
+2026-10-19 13:06:06.539 cmd=553 len=8 hex=00000001000011CF
+2026-10-19 13:12:05.976 cmd=553 len=8 hex=000000010000054D
+2026-10-19 13:12:50.124 cmd=553 len=8 hex=0000000100000FA6
+2026-10-19 13:22:51.340 cmd=553 len=8 hex=000000010000016C
+2026-10-19 13:23:59.431 cmd=553 len=8 hex=000000010000032C
+2026-10-19 13:30:32.129 cmd=553 len=8 hex=0000000100003701
+2026-10-19 13:35:36.781 cmd=553 len=8 hex=0000000100000095
+2026-10-19 13:36:22.957 cmd=553 len=8 hex=0000000100000B68
+2026-10-19 13:45:24.925 cmd=553 len=8 hex=0000000100001632
+2026-10-19 14:18:59.003 cmd=553 len=8 hex=0000000100000084
+2026-10-19 14:20:15.725 cmd=553 len=8 hex=0000000100000219
+2026-10-19 14:22:37.473 cmd=553 len=8 hex=0000000100000574
+2026-10-19 14:23:02.477 cmd=553 len=8 hex=00000001000000AB
+2026-10-19 14:23:18.168 cmd=553 len=8 hex=0000000100000458
+2026-10-19 14:31:57.901 cmd=553 len=8 hex=000000010000074C
+2026-10-19 15:53:43.782 cmd=540 len=17 hex=0000000931206261726261726F00000A3D
+2026-10-19 15:58:47.882 cmd=540 len=17 hex=0000000931206261726261726F00000794
+2026-10-19 15:59:30.267 cmd=553 len=8 hex=0000000100000492
+2026-10-19 16:08:57.507 cmd=553 len=8 hex=000000010000187E
+2026-10-19 16:20:20.033 cmd=553 len=8 hex=000000010000034F

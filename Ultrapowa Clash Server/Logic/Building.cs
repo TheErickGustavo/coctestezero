@@ -41,7 +41,10 @@ namespace UCS.Logic
                 AddComponent(new CombatComponent());
             if (GetBuildingData().ProducesResource != String.Empty)
                 AddComponent(new ResourceProductionComponent());
-            if (GetBuildingData().MaxStoredGold[0] > 0 ||
+            //R-C6: o storage de recurso tambem e criado em predios que PRODUZEM recurso
+            //(MaxStored* vem vazio no CSV; a capacidade real e a coluna ResourceMax).
+            if (GetBuildingData().ProducesResource != String.Empty ||
+                GetBuildingData().MaxStoredGold[0] > 0 ||
                 GetBuildingData().MaxStoredElixir[0] > 0 ||
                 GetBuildingData().MaxStoredDarkElixir[0] > 0 ||
                 GetBuildingData().MaxStoredWarGold[0] > 0 ||

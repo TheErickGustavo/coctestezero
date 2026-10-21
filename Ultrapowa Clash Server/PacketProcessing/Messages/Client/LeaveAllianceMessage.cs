@@ -25,8 +25,11 @@ namespace UCS.PacketProcessing
         public override void Process(Level level)
         {
             Alliance alliance = ObjectManager.GetAlliance(level.GetPlayerAvatar().GetAllianceId());
+            long allianceId = level.GetPlayerAvatar().GetAllianceId();
             level.GetPlayerAvatar().SetAllianceId(0);
             alliance.RemoveMember(level.GetPlayerAvatar().GetId());
+            //R-C4b: recalcula o score do cla apos a saida do membro.
+            ObjectManager.RefreshAllianceScore(allianceId);
             //envoyer message départ à tous les membres
             //si chef nommer un nouveau chef
             //if alliance member count = 0, supprimer alliance

@@ -34,16 +34,37 @@ namespace UCS.PacketProcessing
 
         public override void Execute(Level level)
         {
-            List<Component> components = level.GetComponentManager().GetComponents(0);
-            for (int i = 0; i < components.Count; i++)
+            //R-C5: log do nivel da tropa colocada (o cliente informa o nivel exato).
+            //P-7: o Unknown1 e o TICK do relogio do JOGO (1/60s) no momento da colocacao:
+            //com ele + o 603 (tick final) o servidor estima o dano, a % de destruicao e o loot.
+            Console.WriteLine("[UCS] R-C5 place: unit=" + (Unit != null ? Unit.GetName() : "?") +
+                " id=" + (Unit != null ? Unit.GetGlobalID() : 0) +
+                " unknown1(tick)=" + Unknown1 + " x=" + X + " y=" + Y);
+            //R-C4: registra a tropa colocada + o tick (para estimar o dano da batalha)
+            level.RecordPlacedUnit(Unit, (int)Unknown1);
+            //R-C4/R-T7: a tropa colocada no ataque sai do ACAMPAMENTO (quartel/casa).
+            //Antes o codigo varria TODOS os storages e removia do primeiro que tivesse
+            //aquele tipo - incluindo o CASTELO DO CLA. Resultado: as tropas doadas
+            //sumiam do castelo, o castelo ficava vazio (units: []) e nunca aparecia
+            //na tela de ataque.
+            int removed = AllianceTroopService.RemoveFromArmyCamps(level, Unit, 1);
+            if (removed == 0)
             {
-                UnitStorageComponent c = (UnitStorageComponent)components[i];
-                if (c.GetUnitTypeIndex(Unit) != -1)
+                //R-C5: fallback - o storage pode ser o quartel com a tropa em outro
+                //nivel (o RemoveFromArmyCamps ja remove de qualquer nivel).
+                List<Component> components = level.GetComponentManager().GetComponents(0);
+                for (int i = 0; i < components.Count; i++)
                 {
-                    var storageCount = c.GetUnitCountByData(Unit);
-                    if (storageCount >= 1)
+                    UnitStorageComponent c = (UnitStorageComponent)components[i];
+                    if (c.IsSpellForge)
+                        continue;
+                    Building sb = c.GetParent() as Building;
+                    if (sb != null && sb.GetBuildingData() != null &&
+                        sb.GetBuildingData().GetGlobalID() == 1000014)
+                        continue;   //NUNCA mexe no castelo do cla
+                    if (c.GetUnitTypeIndex(Unit) != -1 && c.GetUnitCountByData(Unit) >= 1)
                     {
-                        c.RemoveUnits(Unit, 1);
+                        c.RemoveUnitsAnyLevel(Unit, 1);
                         break;
                     }
                 }

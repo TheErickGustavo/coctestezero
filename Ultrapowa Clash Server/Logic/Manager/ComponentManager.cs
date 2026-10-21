@@ -51,7 +51,7 @@ namespace UCS.Logic
                     if(cf.TestComponent(c))
                     {
                         GameObject go = c.GetParent();
-                        double lengthSquared = (v - go.GetPosition()).LengthSquared; 
+                        double lengthSquared = (v - go.GetPosition()).LengthSquared;
                         if(lengthSquared < maxLengthSquared || result == null)
                         {
                             maxLengthSquared = lengthSquared;
@@ -175,7 +175,33 @@ namespace UCS.Logic
 
         public void Tick()
         {
-
+            //R-C5: este metodo estava VAZIO - nenhum component era tickado, logo a
+            //producao de tropas (UnitProductionComponent.Tick -> ProductionCompleted)
+            //NUNCA rodava no servidor. A tropa so aparebia no storage quando o jogador
+            //usava gemas (SpeedUp), por isso o servidor ficava sempre atras do cliente
+            //no numero de tropas (acampamento x multiplayer).
+            for (int type = 3; type <= 3; type++)
+            {
+                List<Component> components = m_vComponents[type];
+                for (int i = 0; i < components.Count; i++)
+                {
+                    try
+                    {
+                        components[i].Tick();
+                    }
+                    catch { }
+                }
+            }
+            //R-C6: type 6 = ResourceStorageComponent (producao/coleta de elixir e ouro)
+            List<Component> resStorage = m_vComponents[6];
+            for (int i = 0; i < resStorage.Count; i++)
+            {
+                try
+                {
+                    resStorage[i].Tick();
+                }
+                catch { }
+            }
         }
     }
 }

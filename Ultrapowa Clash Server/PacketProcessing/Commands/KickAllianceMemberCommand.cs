@@ -51,6 +51,9 @@ namespace UCS.PacketProcessing
                     {
                         targetAvatar.SetAllianceId(0);
                         alliance.RemoveMember(m_vAvatarId);
+                        //R-C4b: o score do cla e a soma dos trofeus dos membros; ao expulsar
+                        //alguem o score tem que cair na hora e aparecer no "Meu Cla".
+                        ObjectManager.RefreshAllianceScore(requesterAllianceId);
                         //Now sending messages
                         if (ResourcesManager.IsPlayerOnline(targetAccount))
                         {

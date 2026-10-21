@@ -219,6 +219,63 @@ namespace UCS.Logic
             }
         }
 
+        //R-C5: leitores do estado do heroi (vida e estado). O comando de reviver com
+        //gemas (0x212) e reenviado pelo cliente 7.65 a cada vez que a tela de ataque e
+        //montada; sem esta checagem o servidor cobrava as gemas varias vezes.
+        public int GetHeroHealth(HeroData hd)
+        {
+            int index = GetDataIndex(m_vHeroHealth, hd);
+            return index == -1 ? 0 : m_vHeroHealth[index].Value;
+        }
+
+        public int GetHeroState(HeroData hd)
+        {
+            int index = GetDataIndex(m_vHeroState, hd);
+            return index == -1 ? 0 : m_vHeroState[index].Value;
+        }
+
+        //R-C5: ativa o heroi (Rei/Rainha) para ele aparecer na tela de ataque.
+        //So faz isso se a VILA TEM o altar do heroi: numa vila sem altar o cliente
+        //7.65 crasha com SIGSEGV ao tentar desenhar o heroi.
+        public void ActivateHeroes(Level level)
+        {
+            try
+            {
+                for (int i = 0; i < 2; i++)
+                {
+                    HeroData hd = ObjectManager.DataTables.GetDataById(28000000 + i) as HeroData;
+                    if (hd == null)
+                        continue;
+                    int altarId = 1000022 + i;   //1000022 = Altar do Rei, 1000025 = Altar da Rainha
+                    if (level == null || AllianceTroopService.FindBuilding(level, altarId) == null)
+                        continue;
+                    int lvl = GetUnitUpgradeLevel(hd);
+                    int hp = 0;
+                    if (hd.Hitpoints != null && hd.Hitpoints.Count > 0)
+                    {
+                        int idx = lvl > 0 && lvl < hd.Hitpoints.Count ? lvl : 0;
+                        hp = hd.Hitpoints[idx];
+                    }
+                    if (hp <= 0)
+                        continue;
+                    //R-C5: o cliente 7.65 mostra como "tempo de recuperacao" do heroi
+                    //o hero_health que o servidor manda, em SEGUNDOS (1630 = 27min,
+                    //4453 = 74min = "1h13" - era exatamente o que o usuario via).
+                    //Entao 0 = heroi disponivel na hora (e o cliente para de pedir revive
+                    //com gemas a cada tela de ataque).
+                    SetHeroHealth(hd, 0);
+                    //R-C5: state = 3 (o proprio codigo do UCS usa 3 no FinishUpgrading =
+                    //"heroi pronto/disponivel"). Testado: 0 deixa o heroi em pe mas ele
+                    //NAO aparece na barra de ataque; 2 deixa o heroi deitado.
+                    SetHeroState(hd, 3);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[UCS] R-C5: erro ao ativar herois: " + ex.Message);
+            }
+        }
+
         public void SetHeroState(HeroData hd, int state)
         {
             int index = GetDataIndex(m_vHeroState, hd);

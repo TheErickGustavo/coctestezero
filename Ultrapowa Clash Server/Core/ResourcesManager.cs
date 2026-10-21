@@ -128,8 +128,13 @@ namespace UCS.Core
         public static void LoadLevel(Level level)
         {
             var id = level.GetPlayerAvatar().GetId();
-            if(!m_vInMemoryLevels.ContainsKey(id))
-                m_vInMemoryLevels.TryAdd(id, level);
+            //R-C5: SUBSTITUI a entrada anterior (de um login antigo) pelo level atual.
+            //Com TryAdd a entrada antiga continuava no dicionario e o save periodico
+            //gravava o estado de um level OBSOLETO: por isso as gemas do /give, o
+            //estado do coletor, o castelo do cla etc. se perdiam (o cliente so via a
+            //mudanca ao relogar) - e os comandos admin (/give, /castelo) mexiam numa
+            //copia do level, nao no que o cliente esta usando.
+            m_vInMemoryLevels[id] = level;
         }
 
         public static void LogPlayerIn(Level level, Client client)
@@ -141,9 +146,11 @@ namespace UCS.Core
                 if (!m_vOnlinePlayers.Contains(level))
                 {
                     m_vOnlinePlayers.Add(level);
-                    LoadLevel(level);
                 }
             }
+            //R-C5: sempre (re)registra o level atual como o "em memoria" - e ele que o
+            //save periodico grava e que os comandos admin alteram.
+            LoadLevel(level);
         }
 
         public static void LogPlayerOut(Level level)

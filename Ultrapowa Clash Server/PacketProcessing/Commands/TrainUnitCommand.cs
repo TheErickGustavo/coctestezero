@@ -45,6 +45,13 @@ namespace UCS.PacketProcessing
                 Building b = (Building)go;
                 UnitProductionComponent c = b.GetUnitProductionComponent();
                 CombatItemData cid = (CombatItemData)ObjectManager.DataTables.GetDataById(UnitType);
+                //R-C5: log do nivel pedido pelo cliente (para comparar com o tempo de
+                //treino do servidor - se divergem, o servidor entrega a tropa atrasado).
+                int upLevel = level.GetPlayerAvatar().GetUnitUpgradeLevel(cid);
+                int trainTime = cid.GetTrainingTime(upLevel);
+                Console.WriteLine("[UCS] R-C5 treino: unit=" + cid.GetName() +
+                    " count=" + Count + " unknown1=" + Unknown1 +
+                    " nivelUpgrade=" + upLevel + " trainingTime(servidor)=" + trainTime + "s");
                 do
                 {
                     if (!c.CanAddUnitToQueue(cid))

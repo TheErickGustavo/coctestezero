@@ -12,8 +12,61 @@ namespace UCS.Logic
     // X4b: nucleo compartilhado da doacao de tropas (usado pelo comando 0x04 e pelo /doar do chat).
     static class AllianceTroopService
     {
-        public const int ArmyCampBuildingId = 1000000; // acampamento (fonte da tropa)
+        public const int ArmyCampBuildingId = 1000006; // Barrack/quartel (1000000 e a CASA!)
+        public const int DarkElixirBarrackId = 1000026;
         public const int CastleBuildingId = 1000014;   // castelo de cla (destino)
+
+        //R-T7: herois (Dragao/Golem) nao sao doaveis no CoC 2015.
+        private static readonly int[] HeroUnitIds = { 4000049, 4000073, 4000078 };
+
+        public static bool IsHeroUnit(CombatItemData cd)
+        {
+            if (cd == null)
+                return false;
+            int id = cd.GetGlobalID();
+            for (int i = 0; i < HeroUnitIds.Length; i++)
+            {
+                if (HeroUnitIds[i] == id)
+                    return true;
+            }
+            return false;
+        }
+
+        //R-T7: devolve os storages onde as tropas do jogador ficam (quartéis).
+        //Antes o codigo usava ArmyCampBuildingId = 1000000, que e a CASA -> a contagem
+        //de "quanto tenho para doar" dava sempre 0 ("voce nao tem X no acampamento").
+        private static List<UnitStorageComponent> GetArmyCampStorages(Level level)
+        {
+            List<UnitStorageComponent> result = new List<UnitStorageComponent>();
+            if (level == null)
+                return result;
+            for (int ci = 0; ci < 12; ci++)
+            {
+                List<GameObject> objs = null;
+                try { objs = level.GameObjectManager.GetGameObjects(ci); }
+                catch { objs = null; }
+                if (objs == null)
+                    continue;
+                foreach (GameObject go in objs)
+                {
+                    Building b = go as Building;
+                    if (b == null)
+                        continue;
+                    if (b.GetBuildingData() == null)
+                        continue;
+                    int gid = b.GetBuildingData().GetGlobalID();
+                    if (gid == CastleBuildingId)
+                        continue;   //castelo do cla (destino das doacoes)
+                    if (gid == 1000022 || gid == 1000025)
+                        continue;   //altar do rei/rainha (herois)
+                    UnitStorageComponent usc = b.GetUnitStorageComponent();
+                    if (usc == null || usc.IsSpellForge)
+                        continue;   //feitiaria
+                    result.Add(usc);
+                }
+            }
+            return result;
+        }
 
         // Acha um predio pelo id de dados (ex: 1000014 = castelo) na vila.
         public static Building FindBuilding(Level level, int dataGlobalId)
@@ -50,58 +103,28 @@ namespace UCS.Logic
         public static int CountInArmyCamps(Level donor, CombatItemData cd)
         {
             int count = 0;
-            for (int ci = 0; ci < 12; ci++)
-            {
-                List<GameObject> objs = null;
-                try { objs = donor.GameObjectManager.GetGameObjects(ci); }
-                catch { objs = null; }
-                if (objs == null)
-                    continue;
-                foreach (GameObject go in objs)
-                {
-                    Building b = go as Building;
-                    if (b == null)
-                        continue;
-                    if (b.GetBuildingData() == null || b.GetBuildingData().GetGlobalID() != ArmyCampBuildingId)
-                        continue;
-                    UnitStorageComponent usc = b.GetUnitStorageComponent();
-                    if (usc == null)
-                        continue;
-                    count += usc.GetUnitCountByData(cd);
-                }
-            }
+            if (IsHeroUnit(cd))
+                return 0;
+            foreach (UnitStorageComponent usc in GetArmyCampStorages(donor))
+                count += usc.GetUnitCountByData(cd);
             return count;
         }
 
         public static int RemoveFromArmyCamps(Level donor, CombatItemData cd, int count)
         {
             int remaining = count;
-            for (int ci = 0; ci < 12 && remaining > 0; ci++)
+            foreach (UnitStorageComponent usc in GetArmyCampStorages(donor))
             {
-                List<GameObject> objs = null;
-                try { objs = donor.GameObjectManager.GetGameObjects(ci); }
-                catch { objs = null; }
-                if (objs == null)
+                if (remaining <= 0)
+                    break;
+                int have = usc.GetUnitCountByData(cd);
+                if (have <= 0)
                     continue;
-                foreach (GameObject go in objs)
-                {
-                    if (remaining <= 0)
-                        break;
-                    Building b = go as Building;
-                    if (b == null)
-                        continue;
-                    if (b.GetBuildingData() == null || b.GetBuildingData().GetGlobalID() != ArmyCampBuildingId)
-                        continue;
-                    UnitStorageComponent usc = b.GetUnitStorageComponent();
-                    if (usc == null)
-                        continue;
-                    int have = usc.GetUnitCountByData(cd);
-                    if (have <= 0)
-                        continue;
-                    int take = Math.Min(have, remaining);
-                    usc.RemoveUnits(cd, take);
-                    remaining -= take;
-                }
+                int take = Math.Min(have, remaining);
+                //R-T7: remove de qualquer nivel (o storage e recarregado com nivel -1, mas
+                //tropas treinadas podem ter nivel real) e desconta do avatar.
+                usc.RemoveUnitsAnyLevel(cd, take);
+                remaining -= take;
             }
             return count - remaining;
         }
@@ -152,7 +175,12 @@ namespace UCS.Logic
                     CombatItemData cd = storage.GetUnitType(i);
                     int count = storage.GetUnitCount(i);
                     if (cd != null && count > 0)
-                        avatar.AllianceUnits.Add(new DataSlot(cd, count));
+                    {
+                        //R-T7: id do TIPO da tropa (o cliente 7.65 so reconhece o id do
+                        //nivel 1 - o GetGlobalID() do servidor devolve ids deslocados).
+                        CharacterData baseType = UnitStorageComponent.GetBaseType(cd);
+                        avatar.AllianceUnits.Add(new DataSlot(baseType != null ? (CombatItemData)baseType : cd, count));
+                    }
                 }
                 avatar.SetAllianceCastleLevel(castle.GetUpgradeLevel() + 1); //JSON lvl e 0-based
                 avatar.SetAllianceCastleTotalCapacity(storage.GetMaxCapacity());
@@ -196,6 +224,12 @@ namespace UCS.Logic
             // 1) o solicitante pediu esse tipo de tropa?
             //    X4c: regra do CoC 2015 - qualquer tropa pode ser doada no espaco VAZIO do castelo.
             //    A restricao "pediu apenas X/Y" so vale quando a tropa NAO cabe no espaco vago.
+            //R-T7: herois (Dragao/Golem) nao podem ser doados no CoC 2015.
+            if (IsHeroUnit(cd))
+            {
+                error = TroopNameParser.GetDisplayName(cd) + " e um heroi e nao pode ser doado";
+                return 0;
+            }
             if (request != null && request.GetWantedUnits().Count > 0 && !request.GetWantedUnits().Contains(cd.GetGlobalID()))
             {
                 Building castleChk;

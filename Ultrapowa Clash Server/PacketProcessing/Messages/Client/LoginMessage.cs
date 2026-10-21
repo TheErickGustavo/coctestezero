@@ -10,6 +10,7 @@ using UCS.Helpers;
 using UCS.Core;
 using UCS.Network;
 using UCS.Logic;
+using UCS.GameFiles;
 
 namespace UCS.PacketProcessing
 {
@@ -41,36 +42,103 @@ namespace UCS.PacketProcessing
 
         public override void Decode()
         {
+            try
+            {
+                byte[] raw = GetData();
+                string hex = "";
+                for (int i = 0; i < Math.Min(raw.Length, 200); i++)
+                    hex += raw[i].ToString("X2") + " ";
+                Console.WriteLine("[UCS] R-C8 login payload (" + raw.Length + " bytes): " + hex);
+            }
+            catch { }
             using (var br = new BinaryReader(new MemoryStream(GetData())))
             {
-                m_vAccountId = br.ReadInt64WithEndian();
-                m_vPassToken = br.ReadScString();
-                m_vClientMajorVersion = br.ReadInt32WithEndian();
-                m_vClientContentVersion = br.ReadInt32WithEndian();
-                m_vClientBuild = br.ReadInt32WithEndian();
-                m_vResourceSha = br.ReadScString();
-                m_vUDID = br.ReadScString();
-                m_vOpenUDID = br.ReadScString();
-                m_vMacAddress = br.ReadScString();
-                m_vDevice = br.ReadScString();
-                br.ReadInt32WithEndian();//00 1E 84 81, readDataReference for m_vPreferredLanguage
-                m_vPreferredDeviceLanguage = br.ReadScString();
+                m_vAccountId = br.ReadInt64WithEndianSafe();
+                m_vPassToken = br.ReadScStringSafe();
+                m_vClientMajorVersion = br.ReadInt32WithEndianSafe();
+                m_vClientContentVersion = br.ReadInt32WithEndianSafe();
+                m_vClientBuild = br.ReadInt32WithEndianSafe();
+                m_vResourceSha = br.ReadScStringSafe();
+                m_vUDID = br.ReadScStringSafe();
+                m_vOpenUDID = br.ReadScStringSafe();
+                m_vMacAddress = br.ReadScStringSafe();
+                m_vDevice = br.ReadScStringSafe();
+                br.ReadInt32WithEndianSafe();//00 1E 84 81, readDataReference for m_vPreferredLanguage
+                m_vPreferredDeviceLanguage = br.ReadScStringSafe();
                 //unchecked
-                m_vPhoneId = br.ReadScString();
-                m_vGameVersion = br.ReadScString();
-                br.ReadByte();//01
-                br.ReadInt32WithEndian();//00 00 00 00
-                m_vSignature2 = br.ReadScString();
-                m_vSignature3 = br.ReadScString();
-                br.ReadByte();//01
-                m_vSignature4 = br.ReadScString();
-                m_vClientSeed = br.ReadUInt32WithEndian();
+                m_vPhoneId = br.ReadScStringSafe();
+                m_vGameVersion = br.ReadScStringSafe();
+                br.ReadByteSafe();//01
+                br.ReadInt32WithEndianSafe();//00 00 00 00
+                m_vSignature2 = br.ReadScStringSafe();
+                m_vSignature3 = br.ReadScStringSafe();
+                br.ReadByteSafe();//01
+                m_vSignature4 = br.ReadScStringSafe();
+                m_vClientSeed = br.ReadUInt32WithEndianSafe();
                 if(GetMessageVersion() >=7 )//7.156
                 {
-                    br.ReadByte();
-                    br.ReadUInt32WithEndian();
-                    br.ReadUInt32WithEndian();
+                    br.ReadByteSafe();
+                    br.ReadUInt32WithEndianSafe();
+                    br.ReadUInt32WithEndianSafe();
                 }
+            }
+        }
+
+        //R-C5: dump de diagnostico - resolve o 'data' de cada predio da vila no CSV do
+        //servidor, para conferir se a ordem do CSV bate com a ordem de ids do jogo.
+        private static void DumpBuildingData(Level level)
+        {
+            try
+            {
+                System.Text.StringBuilder sb = new System.Text.StringBuilder();
+                sb.Append("[UCS] R-C5 buildings: ");
+                for (int ci = 0; ci < 12; ci++)
+                {
+                    List<GameObject> objs = null;
+                    try { objs = level.GameObjectManager.GetGameObjects(ci); }
+                    catch { objs = null; }
+                    if (objs == null)
+                        continue;
+                    foreach (GameObject go in objs)
+                    {
+                        Building b = go as Building;
+                        if (b == null)
+                            continue;
+                        BuildingData bd = b.GetBuildingData();
+                        if (bd == null)
+                            continue;
+                        sb.Append("[" + bd.GetGlobalID() + "=>" + bd.TID + " lvl" + b.GetUpgradeLevel() + "]");
+                    }
+                }
+                Console.WriteLine(sb.ToString());
+
+                //R-C5: dump dos storages de tropa (capacidade, uso e slots).
+                System.Text.StringBuilder st2 = new System.Text.StringBuilder();
+                st2.Append("[UCS] R-C5 storages: ");
+                List<Component> comps = level.GetComponentManager().GetComponents(0);
+                for (int i = 0; i < comps.Count; i++)
+                {
+                    UnitStorageComponent usc = comps[i] as UnitStorageComponent;
+                    if (usc == null)
+                        continue;
+                    Building sb2 = usc.GetParent() as Building;
+                    string who = (sb2 != null && sb2.GetBuildingData() != null)
+                        ? sb2.GetBuildingData().GetGlobalID() + ":" + sb2.GetBuildingData().TID + " lvl" + sb2.GetUpgradeLevel()
+                        : "?";
+                    st2.Append("{" + who + " max=" + usc.GetMaxCapacity() +
+                        " used=" + usc.GetUsedCapacity() + " slots=" + usc.GetUnitSlotCount() + " [");
+                    for (int s = 0; s < usc.GetUnitSlotCount(); s++)
+                    {
+                        CombatItemData cd = usc.GetUnitType(s);
+                        st2.Append((cd != null ? cd.GetName() : "?") + "x" + usc.GetUnitCount(s) + " ");
+                    }
+                    st2.Append("]} ");
+                }
+                Console.WriteLine(st2.ToString());
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[UCS] R-C5: erro no dump de buildings: " + ex.Message);
             }
         }
 
@@ -90,11 +158,10 @@ namespace UCS.PacketProcessing
             {
                 if(m_vClientMajorVersion != Convert.ToInt32(versionData[0]) || m_vClientBuild != Convert.ToInt32(versionData[1]))
                 {
-                    var p = new LoginFailedMessage(this.Client);
-                    p.SetErrorCode(8);
-                    p.SetUpdateURL("market://details?id=com.supercell.clashofclans");
-                    PacketManager.ProcessOutgoingPacket(p);
-                    return;
+                    //R-C8: servidor PRIVADO - nao recusa outras versoes (o client v8
+                    //8.67.8 e usado para comparar o castelo do cla). So avisa no log.
+                    Console.WriteLine("[UCS] R-C8: versao do client " + m_vClientMajorVersion + "." +
+                        m_vClientBuild + " (esperado " + versionData[0] + "." + versionData[1] + ") - aceito (servidor privado)");
                 }
             }
             else
@@ -102,6 +169,25 @@ namespace UCS.PacketProcessing
                 Debugger.WriteLine("Connection failed. UCS config key clientVersion is not properly set.");
             }
 
+            //R-C5: o app guarda localmente o accountId que o servidor devolveu
+            //(LoginOk). Depois de limpar os dados ele ficou preso na conta nova (id 25),
+            //cuja vila inicial crasha o cliente (crash do tutorial, ja documentado).
+            //Com DefaultAccountId > 0 o login SEMPRE cai na conta principal.
+            //R-C8: se o accountId lido for invalido (o client v8 tem outro layout de
+            //login e os campos ficam com lixo), usa a conta padrao - evita carregar e
+            //SALVAR a conta errada.
+            if (m_vAccountId <= 0 || m_vAccountId > 1000000)
+            {
+                Console.WriteLine("[UCS] R-C8: accountId invalido (" + m_vAccountId +
+                    ") -> conta padrao " + ObjectManager.DefaultAccountId);
+                m_vAccountId = ObjectManager.DefaultAccountId;
+            }
+            if (ObjectManager.DefaultAccountId > 0)
+            {
+                if (m_vAccountId != ObjectManager.DefaultAccountId)
+                    Console.WriteLine("[UCS] R-C5: login " + m_vAccountId + " -> conta padrao " + ObjectManager.DefaultAccountId);
+                m_vAccountId = ObjectManager.DefaultAccountId;
+            }
             level = ResourcesManager.GetPlayer(m_vAccountId);
             if(level != null)
             {
@@ -165,6 +251,12 @@ namespace UCS.PacketProcessing
             Alliance alliance = ObjectManager.GetAlliance(level.GetPlayerAvatar().GetAllianceId());
             if (alliance == null)
                 level.GetPlayerAvatar().SetAllianceId(0);
+            //R-C5: sincroniza o contador de tropas do avatar com o storage dos quartéis.
+            UnitStorageComponent.SyncAvatarUnitCounts(level);
+            //R-C5: ativa o Rei/Rainha (sem isso eles ficam "dormindo" e nao aparecem
+            //na tela de ataque). So mexe nos herois cuja vila tem o altar.
+            level.GetPlayerAvatar().ActivateHeroes(level);
+            DumpBuildingData(level);
             PacketManager.ProcessOutgoingPacket(new OwnHomeDataMessage(this.Client, level));
             //X3: historico do mural - o servidor real NAO manda 24311 (conn27), mas sem ele o mural some ao relogar.
             //     Reativado de proposito (desvio consciente do real) p/ o mural persistir entre relogins do cliente.

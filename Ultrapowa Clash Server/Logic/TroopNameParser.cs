@@ -58,7 +58,10 @@ namespace UCS.Logic
                     CharacterData cd = ObjectManager.DataTables.GetCharacterByName(row[0]);
                     if (cd == null)
                         continue; // tropa que nao existe nessa versao do gamefiles
-                    int id = cd.GetGlobalID();
+                    //R-T7: id REAL do tipo (4000000 + linha do CSV). Com o
+                    //GetGlobalID() (count parcial) o alias "dragao" apontava para
+                    //4000006 e o GetDataById devolvia a tropa errada.
+                    int id = DataSlotUtil.GetClientGlobalId(cd);
                     if (!m_vUnitDisplayName.ContainsKey(id))
                         m_vUnitDisplayName.Add(id, row[1]);
                     AddAlias(Normalize(row[0]), id);

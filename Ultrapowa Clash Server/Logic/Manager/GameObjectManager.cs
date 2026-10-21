@@ -16,6 +16,10 @@ namespace UCS.Logic
 {
     class GameObjectManager
     {
+        //R-C6: periodo do respawn global (12h) e seed do jogo.
+        public const long RespawnPeriod = 43200;
+        public const int RespawnSeed = 0;
+
         private List<List<GameObject>> m_vGameObjects;
         private List<int> m_vGameObjectsIndex;
         private ComponentManager m_vComponentManager;
@@ -113,10 +117,51 @@ namespace UCS.Logic
                 Building b = (Building)go;
                 JObject jsonObject = new JObject();
                 jsonObject.Add("data", b.GetBuildingData().GetGlobalID());
+                //R-C5: o jogo 7.65 manda o "id" do objeto (ex.: 500000171). Sem ele o
+                //cliente 7.65 nao consegue ligar o heroi ao altar nem achar o castelo do
+                //cla (que nao aparecia na tela de ataque) - e os ids que o cliente manda
+                //nos comandos (ex.: 0x1DCD654B) sao esses mesmos.
+                jsonObject.Add("id", b.GlobalId);
                 b.Save(jsonObject);
+                //R-T7: o castelo do cla e os altares de heroi recebem, no jogo 7.65, o
+                //campo "mode" e as posicoes l1x/l1y, l2x/l2y, l6x/l6y (a posicao do
+                //predio em cada nivel/modo). Sem eles o cliente 7.65 nao desenhava o
+                //slot do escudo do cla na barra de ataque.
+                //Exemplo real (ALL_LEVELS v7.65): {"data":1000014,"id":500000004,
+                //"lvl":0,"x":24,"y":19,"mode":0,"l2x":24,"l2y":19,"l6x":24,"l6y":19}
+                int bid = b.GetBuildingData().GetGlobalID();
+                if (bid == 1000014)   //castelo do cla
+                {
+                    jsonObject["mode"] = 0;
+                }
+                if (bid == 1000014 || bid == 1000022 || bid == 1000025) //castelo/altares
+                {
+                    jsonObject["l1x"] = b.X;
+                    jsonObject["l1y"] = b.Y;
+                    jsonObject["l2x"] = b.X;
+                    jsonObject["l2y"] = b.Y;
+                    jsonObject["l6x"] = b.X;
+                    jsonObject["l6y"] = b.Y;
+                }
                 jsonBuildingsArray.Add(jsonObject);
             }
             jsonData.Add("buildings",jsonBuildingsArray);
+
+            //R-T7: campos que o CLIENTE 7.65 conhece (strings do binario) mas que nao
+            //existem no CSV 7.65 - eles ficam no save local dele. Sem informa-los o
+            //cliente nao sabe o nivel do castelo do cla nem a capacidade de tropas do
+            //cla em visita, e o slot do escudo do cla na barra de ataque nao aparecia.
+            ClientAvatar pav = m_vLevel != null ? m_vLevel.GetPlayerAvatar() : null;
+            if (pav != null)
+            {
+                jsonData["castle_lvl"] = pav.GetAllianceCastleLevel();
+                jsonData["castle_total"] = pav.GetAllianceCastleTotalCapacity();
+                jsonData["castle_used"] = pav.GetAllianceCastleUsedCapacity();
+                jsonData["alliance_unit_visit_capacity"] = pav.GetAllianceCastleTotalCapacity();
+                jsonData["alliance_exp_level"] = 1;
+                jsonData["badge_id"] = 0;
+                jsonData["town_hall_lvl"] = pav.GetAvatarLevel();
+            }
 
             //Traps
             JArray jsonTrapsArray = new JArray();
@@ -155,13 +200,18 @@ namespace UCS.Logic
             }
             jsonData.Add("obstacles", jsonObstaclesArray);
 
-            //RespawnVars / liga (espelho do home real 7.65.5)
+            //R-C6: o cliente 7.65 recalcula o acumulado do coletor pelo RELOGIO DA
+            //SESSAO DA VILA (nao pelo servidor): ele ignora o "avail" e o "t" que o
+            //servidor manda. Com "secondsFromLastRespawn" = 0 o cliente acumula
+            //normalmente durante a sessao da vila (e zera ao trocar de vila, como no
+            //jogo real). Valores "reais" aqui fazem o cliente mostrar 0 (reset).
             JObject jsonRespawn = new JObject();
             jsonRespawn.Add("secondsFromLastRespawn", 0);
-            jsonRespawn.Add("respawnSeed", 0);
+            jsonRespawn.Add("respawnSeed", RespawnSeed);
             jsonRespawn.Add("time_to_gembox_drop", 2147000000);
             jsonRespawn.Add("time_in_gembox_period", 2147000000);
             jsonRespawn.Add("time_to_special_drop", 2147000000);
+            jsonRespawn.Add("time_in_special_period", 2147000000);
             jsonRespawn.Add("time_to_special_period", 2147000000);
             jsonData.Add("respawnVars", jsonRespawn);
             jsonData.Add("last_league_rank", 0);
@@ -179,6 +229,24 @@ namespace UCS.Logic
                 Building b = new Building(bd, m_vLevel);
                 AddGameObject(b);
                 b.Load(jsonBuilding);
+                //R-C5: restaura o "id" original do objeto (o jogo real salva o id no
+                //JSON). Sem isso o id mudava a cada carga da vila e o cliente perdia a
+                //ligacao entre o heroi/castelo e o predio.
+                if (jsonBuilding["id"] != null)
+                {
+                    try
+                    {
+                        int savedId = jsonBuilding["id"].ToObject<int>();
+                        if (savedId > 0)
+                        {
+                            b.GlobalId = savedId;
+                            int idx = savedId - GlobalID.CreateGlobalID(500, 0);
+                            if (idx >= m_vGameObjectsIndex[0])
+                                m_vGameObjectsIndex[0] = idx + 1;
+                        }
+                    }
+                    catch { }
+                }
             }
 
             JArray jsonTraps = (JArray)jsonObject["traps"];
