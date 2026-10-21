@@ -280,3 +280,25 @@ castelo do clã** (o formato exato que o 7.65 não tem).
 **No 7.65, o que ficou resolvido e validado (P-1):** castelo do DEFENSOR com
 tropas doadas na tela de ataque, tropas doadas fora do acampamento, tropas
 treinadas fora do castelo, apagar do castelo (Unknown1=1) e ids de tropa reais.
+
+### Estado do laboratório v8 (21/10, fim do dia)
+- **O client v8 ABRE e funciona** — ele está falando com o **MAGIC-SERVER** (o
+  servidor embutido no app "clash v8 server", no celular) através do nosso proxy
+  (`adb reverse tcp:9338 tcp:9342` → proxy no PC → `adb forward tcp:9339` → magic).
+  O user já viu o **tutorial** do v8 funcionando.
+- A **captura** do tráfego (client v8 ↔ magic) está em
+  `/tmp/opencode/v8/captura-v8.bin`: handshake (C->S 248 B, S->C 79 B, S->C 2531 B).
+- O frame do v8 é `[i32 messageId][i16 ?][i16 ?][payload cifrado]`
+  (ex.: `27 75 00 00 | f1 00 | 07 02 | ...` → 0x2775 = 10101 = LoginMessage).
+- O `EnDecrypt` do servidor é **RC4 (variante CoC)** e a chave pública é a MESMA do
+  UCS 0.6.1 (`m_vEnDecryptKey`, 264 bytes, idêntica no `ucs-jeanbmar`).
+  **A chave evolve a cada frame e por direção** (o `Decrypt` é aplicado só no
+  PAYLOAD, depois do header de 8 bytes) — decodificar a captura exige replicar
+  esse detalhe.
+- O `PacketManager` do servidor aplica `p.Client.Decrypt(p.GetData())` — ou seja,
+  o **nosso servidor já é v8**; o que faltou era o `ReadScString`/layout do login
+  (já tolerantes) e a **chave/frame** certainos.
+
+**Próximo passo:** decifrar a captura (RC4 com o payload a partir do byte 8, chaves
+separadas por direção) → ver o **avatar v8 com o castelo do clã** (o formato que o
+7.65 não tem) → aplicar no 7.65.
