@@ -45,26 +45,26 @@ namespace UCS.PacketProcessing
             using (var br = new BinaryReader(new MemoryStream(GetData())))
             {
                 m_vAccountId = br.ReadInt64WithEndian();
-                m_vPassToken = br.ReadScString();
+                m_vPassToken = br.ReadScStringSafe();
                 m_vClientMajorVersion = br.ReadInt32WithEndian();
                 m_vClientContentVersion = br.ReadInt32WithEndian();
                 m_vClientBuild = br.ReadInt32WithEndian();
-                m_vResourceSha = br.ReadScString();
-                m_vUDID = br.ReadScString();
-                m_vOpenUDID = br.ReadScString();
-                m_vMacAddress = br.ReadScString();
-                m_vDevice = br.ReadScString();
+                m_vResourceSha = br.ReadScStringSafe();
+                m_vUDID = br.ReadScStringSafe();
+                m_vOpenUDID = br.ReadScStringSafe();
+                m_vMacAddress = br.ReadScStringSafe();
+                m_vDevice = br.ReadScStringSafe();
                 br.ReadInt32WithEndian();//00 1E 84 81, readDataReference for m_vPreferredLanguage
-                m_vPreferredDeviceLanguage = br.ReadScString();
+                m_vPreferredDeviceLanguage = br.ReadScStringSafe();
                 //unchecked
-                m_vPhoneId = br.ReadScString();
-                m_vGameVersion = br.ReadScString();
+                m_vPhoneId = br.ReadScStringSafe();
+                m_vGameVersion = br.ReadScStringSafe();
                 br.ReadByte();//01
                 br.ReadInt32WithEndian();//00 00 00 00
-                m_vSignature2 = br.ReadScString();
-                m_vSignature3 = br.ReadScString();
+                m_vSignature2 = br.ReadScStringSafe();
+                m_vSignature3 = br.ReadScStringSafe();
                 br.ReadByte();//01
-                m_vSignature4 = br.ReadScString();
+                m_vSignature4 = br.ReadScStringSafe();
                 m_vClientSeed = br.ReadUInt32WithEndian();
                 if(GetMessageVersion() >=7 )//7.156
                 {
